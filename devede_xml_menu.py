@@ -987,7 +987,7 @@ class xml_files(devede_executor.executor):
 			lavcopts+="ac3_fixed"
 		else:
 			lavcopts+="ac3"
-		lavcopts+=":abitrate=128:aspect="+wide
+		lavcopts+=":abitrate=192:aspect="+wide
 		command_var.append(lavcopts)
 		command_var.append("-o")
 		command_var.append(currentfile)
