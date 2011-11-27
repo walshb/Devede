@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+# vim:noet:ts=4:sts=4:sw=4
 
 # Copyright 2006-2009 (C) Raster Software Vigo (Sergio Costas)
 # Copyright 2006-2009 (C) Peter Gill - win32 parts
@@ -26,7 +27,6 @@ import pygtk # for testing GTK version number
 pygtk.require ('2.0')
 import gtk
 import gobject
-import subprocess
 import locale
 import gettext
 import stat

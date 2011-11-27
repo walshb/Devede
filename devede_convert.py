@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+# vim:noet:ts=4:sts=4:sw=4
+
 # Copyright 2006-2009 (C) Raster Software Vigo (Sergio Costas)
 # Copyright 2006-2009 (C) Peter Gill - win32 parts
 
@@ -27,7 +29,6 @@
 import time
 import select
 import signal
-import subprocess
 import sys
 import os
 import re

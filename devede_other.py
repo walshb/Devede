@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+# vim:noet:ts=4:sts=4:sw=4
 
 # Copyright 2006-2009 (C) Raster Software Vigo (Sergio Costas)
 # Copyright 2006-2009 (C) Peter Gill - win32 parts
@@ -25,7 +26,6 @@
 ###########################################################################
 
 import os
-import subprocess
 import stat
 import sys
 import shutil
@@ -234,7 +234,7 @@ class check_utf(devede_executor.executor):
 	def convert_to_UTF8(self,infile_n,outfile_n,origin_format):
 		
 		command_line='iconv -f '+str(origin_format)+' -t UTF-8 "'+str(infile_n)+'" > "'+str(outfile_n)+'"'
-		return self.launch_shell(command_line).wait()
+		return self.launch_shell(command_line)
 	
 	
 	def convert_16_to_8(self,infile_n,outfile_n):
@@ -406,14 +406,10 @@ def check_program(programa):
 	""" This function allows to check that a program is available in the system, just
 	by calling it without arguments and checking the error returned """
 
-	if (sys.platform=="win32") or (sys.platform=="win64"):
-		launcher=devede_executor.executor()
-		p=launcher.launch_program(programa,win32arg=False)
-	else:
-		p=subprocess.Popen(programa+" >/dev/null 2>/dev/null",shell=True)
+	launcher=devede_executor.executor()
+	launcher.launch_program(programa,win32arg=False)
 
-	p.wait()
-	return p.returncode
+	return launcher.wait_end()
 
 
 def load_config(global_vars):

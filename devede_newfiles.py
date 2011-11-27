@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+# vim:noet:ts=4:sts=4:sw=4
 
 # Copyright 2006-2009 (C) Raster Software Vigo (Sergio Costas)
 # Copyright 2006-2009 (C) Peter Gill - win32 parts
@@ -99,12 +100,12 @@ class file_get_params(devede_executor.executor):
 		else:
 			command="mplayer"
 		launcher=[command, "-loop","1","-identify", "-ao", "null", "-vo", "null", "-frames", str(nframes), filename]
-		handler=self.launch_program(launcher, win32arg=False,with_stderr=False)
+		self.launch_program(launcher, win32arg=False,with_stderr=False)
+		self.wait_end()
 
 		minimum_audio=10000
 		audio_list=[]
-		while True:
-			linea=handler.stdout.readline()
+		for linea in self.cadena.split('\n'):
 			linea=self.remove_ansi(linea)
 			if linea=="":
 				break
@@ -145,9 +146,7 @@ class file_get_params(devede_executor.executor):
 				if minimum_audio>audio_track:
 					minimum_audio=audio_track
 				audio_list.append(audio_track)
-				
-		handler.wait()
-		
+
 		if (video==0) or (width==0) or (height==0):
 			if (audio!=0):
 				self.length=length
