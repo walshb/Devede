@@ -215,10 +215,10 @@ class executor:
 				if (sys.platform=="win32") or (sys.platform=="win64"):
 					handle.set_priority()
 					if stdout == subprocess.PIPE:
-						self.out_thread = PipeThread(stdout, bufsize, keep_output=output)
+						self.out_thread = PipeThread(stdout, bufsize)
 						self.out_thread.start()
 					if stderr == subprocess.PIPE:
-						self.err_thread = PipeThread(stderr, bufsize, keep_output=with_stderr)
+						self.err_thread = PipeThread(stderr, bufsize)
 						self.err_thread.start()
 
 		# Don't return any handle. The caller should call refresh or wait_end.
@@ -350,13 +350,12 @@ class executor:
 
 
 class PipeThread(threading.Thread):
-	def __init__(self, fin, chars=1024, keep_output=False):
+	def __init__(self, fin, chars=1024):
 		threading.Thread.__init__(self)
 		self.chars=chars
 		self.fin = fin  # file in
 		self.sout = []
 		self.lock = threading.Lock()
-		self.keep_output = keep_output
 
 	def run(self):
 		while True:
@@ -364,17 +363,14 @@ class PipeThread(threading.Thread):
 				timer = threading.Timer(10, self._alarm_handler)
 				data = self.fin.read(self.chars)
 				timer.cancel()
+				self._append_data(data)
 				if not data:
 					break
-				if self.keep_output:
-					self._append_data(data)
 			except Exception, e:
 				if not str(e) == 'timeout':  # something else went wrong ..
 					pass
 					#raise # got the timeout exception from alarm .. proc is hung; kill it
 				break
-
-		self.append_data('')  # signal end
 
 	def _alarm_handler(self):
 		print "Process read timeout exception"
