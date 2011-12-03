@@ -107,8 +107,7 @@ class file_get_params(devede_executor.executor):
 		audio_list=[]
 		for linea in self.cadena.split('\n'):
 			linea=self.remove_ansi(linea)
-			if linea=="":
-				break
+
 			position=linea.find("ID_")
 			if position==-1:
 				continue

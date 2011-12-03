@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+# vim:noet:ts=4:sts=4:sw=4
 
 # Copyright 2006-2009 (C) Raster Software Vigo (Sergio Costas)
 # Copyright 2006-2009 (C) Peter Gill - win32 parts
@@ -879,10 +880,12 @@ class xml_files(devede_executor.executor):
 		currentfile=self.filefolder+self.filename+"_menu_"+str(counter)+".mpg"
 	
 		audio=self.menu_sound
-		command_var.append("-loop_input")
-		
+
 		command_var.append("-f")
 		command_var.append("image2")
+
+		command_var.extend(["-loop", '1'])
+
 		command_var.append("-t")
 		command_var.append(str(1+self.menu_sound_duration))
 		command_var.append("-i")
@@ -909,10 +912,10 @@ class xml_files(devede_executor.executor):
 		command_var.append("1")
 		command_var.append("-mbd")
 		command_var.append("2")
-		command_var.append("-b")
+		command_var.append("-b:v")
 		command_var.append("1000000")
 		command_var.append("-ab")
-		command_var.append("128000")
+		command_var.append("192000")
 		command_var.append("-aspect")
 		command_var.append("4:3")
 
@@ -1026,11 +1029,11 @@ class xml_files(devede_executor.executor):
 			comando.append(self.filefolder+self.filename+"_menu2_"+str(counter)+".mpg")
 			self.launch_program(comando)
 		else:
-			comando="spumux"
-			
-			comando+=' "' +self.filefolder+self.filename+'_menu_'+str(counter)+'.xml"'
+			comando = ["spumux"]
 
-			print "Launch: "+comando
+			comando.append(os.path.join(self.filefolder, self.filename + '_menu_' + str(counter) + '.xml'))
+
+			print "Launch: ", comando
 			self.launch_shell(comando,stdinout=[self.filefolder+self.filename+"_menu_"+str(counter)+".mpg",self.filefolder+self.filename+"_menu2_"+str(counter)+".mpg"])
 
 

@@ -35,6 +35,7 @@ if (sys.platform=="win32") or (sys.platform=="win64"):
 
 import threading
 import gobject
+import traceback
 
 
 _log_fd = None
@@ -50,8 +51,12 @@ class executor:
 		# FILEFOLDER is the path where all the temporary and finall files will be created
 		# PROGRESBAR is the GtkProgressBar where the class will show the progress
 
+		global _log_fd
+
 		if _log_fd is None and filefolder is not None:
-			_log_fd = open(os.path.join(filefolder, 'devede.log'), 'w')
+			log_filename = os.path.join(filefolder, 'devede.log')
+			sys.stderr.write('\nlogging to %s\n' % log_filename)
+			_log_fd = open(log_filename, 'w')
 
 		self.initerror=False
 		self.handle=None
@@ -82,6 +87,9 @@ class executor:
 	def _log_data(self, data):
 		if _log_fd:
 			_log_fd.write(data)
+			_log_fd.flush()
+		else:
+			sys.stderr.write(data)
 
 	def _announce_launch(self, cmd, in_filename, out_filename):
 		if isinstance(cmd, list):
@@ -90,8 +98,9 @@ class executor:
 			cmd += ' <%s' % in_filename
 		if out_filename:
 			cmd += ' >%s' % out_filename
-		_log_data('\n\n%s\n\n' % cmd)
+		self._log_data('\n\n%s\n\n' % cmd)
 		print "Launching program:", cmd
+		traceback.print_stack()
 
 
 	def cancel(self):
@@ -109,7 +118,7 @@ class executor:
 			os.kill(self.handle.pid,signal.SIGKILL)
 		
 	
-	def wait_end(self):
+	def _wait_end_internal(self):
 		"""Wait until the process ends.
 		Return the return code of the process."""
 		
@@ -127,8 +136,12 @@ class executor:
 		self.handle.wait()
 
 		return self.handle.returncode
-	
-	
+
+
+	def wait_end(self):
+		return self._wait_end_internal()
+
+
 	def wait_end2(self):
 		return self.wait_end()
 
@@ -149,7 +162,7 @@ class executor:
 		self._popen(program, in_filename=in_filename, out_filename=out_filename)
 
 		if self.handle:
-			return self.wait_end()
+			return self._wait_end_internal()
 
 		print "Fallo"
 		return None 
@@ -166,11 +179,14 @@ class executor:
 		self.sep_stderr=sep_stderr
 		self.keep_output=keep_out
 
-		self._popen(program, stdin=None, in_filename=None, out_filename=None)
+		self._popen(program, in_filename=None, out_filename=None)
 
 
-	def _popen(program, in_filename, out_filename):
-		bufsize = 1024
+	def _popen(self, program, in_filename, out_filename):
+		if isinstance(program, str):
+			program = program.split(' ')
+
+		bufsize = 4096
 
 		stdin = None
 		stdout = subprocess.PIPE
@@ -195,31 +211,41 @@ class executor:
 
 		self._announce_launch(program, in_filename, out_filename)
 
+		self._log_data('pathlist = %s\n' % (pathlist,))
+
 		for elemento in pathlist:
-			print "elemento: ", elemento
+			self._log_data("elemento: %s\n" % (elemento,))
+			full_path = os.path.join(elemento, program[0])
+			if not os.path.exists(full_path):
+				continue
+			program2=program[:]
+			program2[0] = full_path
+			self._log_data(' popen %s\n' % (program2,))
 			try:
-				program2=program[:]
-				program2[0] = os.path.join(elemento, program2[0])
-				handle = subprocess.Popen(program2, executable=program[0], creationflags=self.creationflags, \
+				handle = subprocess.Popen(program2, bufsize=bufsize, \
+					creationflags=self.creationflags, \
 					stdin=stdin, stdout=stdout, stderr=stderr)
 			except OSError:
+				self._log_data('error launching %s\n' % (program2,))
 				print "error in launch program\n"
-				pass
-			else:
-				self.handle=handle
-				self.pipes = []
+				continue
+
+			self.handle=handle
+			self.pipes = []
+			if stdout == subprocess.PIPE:
+				self.pipes.append(handle.stdout)
+			if stderr == subprocess.PIPE:
+				self.pipes.append(handle.stderr)
+			if (sys.platform=="win32") or (sys.platform=="win64"):
+				handle.set_priority()
 				if stdout == subprocess.PIPE:
-					self.pipes.append(handle.stdout)
+					self.out_thread = PipeThread(stdout, bufsize)
+					self.out_thread.start()
 				if stderr == subprocess.PIPE:
-					self.pipes.append(handle.stderr)
-				if (sys.platform=="win32") or (sys.platform=="win64"):
-					handle.set_priority()
-					if stdout == subprocess.PIPE:
-						self.out_thread = PipeThread(stdout, bufsize)
-						self.out_thread.start()
-					if stderr == subprocess.PIPE:
-						self.err_thread = PipeThread(stderr, bufsize)
-						self.err_thread.start()
+					self.err_thread = PipeThread(stderr, bufsize)
+					self.err_thread.start()
+
+			break
 
 		# Don't return any handle. The caller should call refresh or wait_end.
 		return None
@@ -288,7 +314,7 @@ class executor:
 
 		res = (len(outdata) + len(errdata) > 0)
 
-		return not self.res
+		return not res
 
 
 	def set_progress_bar(self):
