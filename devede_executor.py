@@ -35,7 +35,6 @@ if (sys.platform=="win32") or (sys.platform=="win64"):
 
 import threading
 import gobject
-import traceback
 
 
 _log_fd = None
@@ -100,7 +99,6 @@ class executor:
 			cmd += ' >%s' % out_filename
 		self._log_data('\n\n%s\n\n' % cmd)
 		print "Launching program:", cmd
-		traceback.print_stack()
 
 
 	def cancel(self):
