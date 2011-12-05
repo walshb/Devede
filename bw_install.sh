@@ -42,4 +42,6 @@ inst_devede() {
     ./install.sh --prefix=$PREFIX
 }
 
+find . -name '*.pyc' -print0 | xargs -r0 rm
+
 inst_devede
