@@ -121,10 +121,10 @@ class executor:
 	def _wait_end_internal(self):
 		"""Wait until the process ends.
 		Return the return code of the process."""
-		
+
 		if self.handle==None:
 			return 0
-	
+
 		while self.pipes:
 			self._read_line_from_output()
 
@@ -165,7 +165,7 @@ class executor:
 			return self._wait_end_internal()
 
 		print "Fallo"
-		return None 
+		return None
 
 
 	def launch_program(self,program,read_chars=80,output=True,win32arg=True,with_stderr=True, sep_stderr=False,keep_out=False):
