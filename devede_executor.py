@@ -181,8 +181,7 @@ class executor:
 
 
 	def _popen(self, program, in_filename, out_filename):
-		if isinstance(program, str):
-			program = program.split(' ')
+		assert isinstance(program, list)
 
 		bufsize = 4096
 
