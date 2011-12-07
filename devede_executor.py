@@ -38,6 +38,7 @@ import gobject
 
 
 _log_fd = None
+_test_threads = False
 
 
 class executor:
@@ -61,6 +62,7 @@ class executor:
 		self.handle=None
 		self.sep_stderr=False
 		self.platform_win32=((sys.platform=="win32") or (sys.platform=="win64"))
+		self._use_threads = self.platform_win32 or _test_threads
 
 		self.creationflags = 0
 		if self.platform_win32:
@@ -127,8 +129,10 @@ class executor:
 			self._read_line_from_output()
 
 		if self.out_thread:
+			self._log_data('joining stdout thread\n')
 			self.out_thread.join()
 		if self.err_thread:
+			self._log_data('joining stderr thread\n')
 			self.err_thread.join()
 
 		self.handle.wait()
@@ -233,13 +237,15 @@ class executor:
 				self.pipes.append(handle.stdout)
 			if stderr == subprocess.PIPE:
 				self.pipes.append(handle.stderr)
-			if (sys.platform=="win32") or (sys.platform=="win64"):
+			if self.platform_win32:
 				handle.set_priority()
+			if self._use_threads:
+				self._log_data('starting threads\n')
 				if stdout == subprocess.PIPE:
-					self.out_thread = PipeThread(stdout, bufsize)
+					self.out_thread = PipeThread(handle.stdout, bufsize)
 					self.out_thread.start()
 				if stderr == subprocess.PIPE:
-					self.err_thread = PipeThread(stderr, bufsize)
+					self.err_thread = PipeThread(handle.stderr, bufsize)
 					self.err_thread.start()
 
 			break
@@ -277,7 +283,7 @@ class executor:
 		outdata = []
 		errdata = []
 
-		if self.platform_win32:
+		if self._use_threads:
 			if self.out_thread:
 				outdata = self.out_thread.get_data()
 			if self.err_thread:
