@@ -54,6 +54,8 @@ import devede_dvd
 import devede_bincue
 import devede_executor
 import devede_dialogs
+import devede_cliutils
+import traceback
 
 import gc
 
@@ -188,23 +190,29 @@ class create_all:
 		if (global_vars["disctocreate"]=="divx") and (global_vars["use_ffmpeg"]):
 			if (False==self.check_mp3lame()):
 				return
-		
-		self.tree=devede_other.create_tree(self,"wprogress",self.gladefile)
-		
-		self.window=self.tree.get_object("wprogress")
-		self.partial=self.tree.get_object("progresspartial")
+
+		if self.gladefile:
+			self.tree=devede_other.create_tree(self,"wprogress",self.gladefile)
+			self.window=self.tree.get_object("wprogress")
+			self.partial=self.tree.get_object("progresspartial")
+			self.total=self.tree.get_object("progress_total")
+			self.label=self.tree.get_object("lcreating")
+			self.total.set_fraction(0)
+			self.partial.set_fraction(0)
+			self.partial.set_text("0%")
+			self.label.set_text("")
+		else:
+			self.window = None
+			self.partial = devede_cliutils.TextProgressBar()
+			self.label = self.partial
+			self.total = self.partial
+
 		self.erase_temp=global_vars["erase_temporary_files"]
 		self.iso_creator=global_vars["iso_creator"]
 
 		self.queue=[]
 		self.current_action=0
 		self.actions=global_vars["number_actions"]
-		self.total=self.tree.get_object("progress_total")
-		self.label=self.tree.get_object("lcreating")
-		self.total.set_fraction(0)
-		self.partial.set_fraction(0)
-		self.partial.set_text("0%")
-		self.label.set_text("")
 		self.start_time=time.time()
 		self.disk_type=global_vars["disctocreate"]
 		self.main_window_callback=callback
@@ -294,37 +302,7 @@ class create_all:
 		ventana.response(-6)
 
 
-	def create_disc(self):
-		
-		self.time=0
-		
-		if (self.has_mp3lame==False):
-			self.window.hide()
-			self.window.destroy()
-			(self.main_window_callback)()
-			return False
-		
-		# first, check for empty titles
-		
-		empty=False
-		for element in self.structure:
-			if len(element)<2:
-				empty=True
-				break
-			
-		if empty:
-			newtree=devede_other.create_tree(self,"wempty_titles_dialog",self.gladefile,False)
-			w=newtree.get_object("wempty_titles_dialog")
-			w.show()
-			value=w.run()
-			w.hide()
-			w.destroy()
-			if value!=-6:
-				self.window.hide()
-				self.window.destroy()
-				(self.main_window_callback)()
-				return False
-
+	def _ask_folder(self):
 		# ask the folder and filename
 		
 		newtree=devede_other.create_tree(self,"wfolder_dialog",self.gladefile,False)
@@ -364,12 +342,7 @@ class create_all:
 		self.global_vars["finalfolder"]=filefolder
 		
 		filefolder2=os.path.join(filefolder,self.filename)
-		
-		self.filefolder=filefolder2
-		
-		if self.filefolder[-1]!=os.sep:
-			self.filefolder+=os.sep
-		
+
 		if (os.path.exists(filefolder2)):
 			newtree=devede_other.create_tree(self,"wfolder_exists",self.gladefile,False)
 			w=newtree.get_object("wfolder_exists")
@@ -384,14 +357,57 @@ class create_all:
 				self.window.destroy()
 				(self.main_window_callback)()
 				return False
-		
+
+	def create_disc(self):
+
+		self.time=0
+
+		if (self.has_mp3lame==False):
+			self.window.hide()
+			self.window.destroy()
+			(self.main_window_callback)()
+			return False
+
+		# first, check for empty titles
+
+		empty=False
+		for element in self.structure:
+			if len(element)<2:
+				empty=True
+				break
+
+		if empty:
+			newtree=devede_other.create_tree(self,"wempty_titles_dialog",self.gladefile,False)
+			w=newtree.get_object("wempty_titles_dialog")
+			w.show()
+			value=w.run()
+			w.hide()
+			w.destroy()
+			if value!=-6:
+				self.window.hide()
+				self.window.destroy()
+				(self.main_window_callback)()
+				return False
+
+		if self.gladefile:
+			self._ask_folder()
+		else:
+			self.filename = self.global_vars['outputname']
+
+		filefolder = self.global_vars['finalfolder']  # parent of folder where we build disk
+
+		filefolder2 = os.path.join(filefolder, self.filename)
+		self.filefolder = filefolder2
+		if not self.filefolder.endswith(os.sep):
+			self.filefolder += os.sep
+
 		try:
 			os.remove(filefolder2)
 		except:
 			pass
 		
 		try:
-			os.mkdir(filefolder2)
+			os.makedirs(filefolder2)
 		except:
 			pass
 	
@@ -445,11 +461,23 @@ class create_all:
 		self.seconds=0
 		self.total_done=0.0
 		self.timer=gobject.timeout_add(250,self.time_callback)
-		self.window.show()
+
+		if self.gladefile:
+			self.window.show()
+
 		return True
 
 
 	def time_callback(self):
+		try:
+			return self._time_callback_internal()
+		except Exception, ex:
+			devede_cliutils.handle_exception()
+
+		return False
+
+
+	def _time_callback_internal(self):
 
 		""" This method launches all the conversion stages when needed, using the standard executor
 		interface to manage all of them in an easy way """
@@ -467,12 +495,13 @@ class create_all:
 				self.current_action+=1
 				retval=self.runner.wait_end()
 				if (retval!=0) or (self.runner.initerror):
-					self.window.hide()
-					self.window.destroy()
+					if self.window:
+						self.window.hide()
+						self.window.destroy()
 					if self.runner.print_error==None:
 						self.runner.print_error=_("Unknown error")
 					self.show_error(self.runner.print_error)
-					(self.main_window_callback)()
+					self.main_window_callback()
 					return False
 				else:
 					self.runner.end_process(self.eraser,self.erase_temp)
@@ -567,6 +596,10 @@ class create_all:
 		if (self.erase_temp):
 			self.eraser.delete_xml()
 
+		if not self.window:
+			sys.stderr.write('FINISHED.\n')
+			return
+
 		self.window.hide()
 		self.window.destroy()
 		if (self.global_vars["shutdown_after_disc"]):
@@ -636,7 +669,9 @@ class create_all:
 
 
 	def show_error(self,message):
-		
+		if not self.window:
+			devede_cliutils.error_exit(message)
+
 		self.window.hide()
 		self.window.destroy()
 		devede_dialogs.show_error(self.gladefile,message)

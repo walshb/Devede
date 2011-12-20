@@ -662,8 +662,10 @@ def get_dvd_size(tree,disctocreate):
 		else:
 			tamano=8000.0
 	else:
-		tamano=0
-	
+		##tamano=0
+		# XXX default
+		tamano = 4700.0
+
 	if disctocreate=="vcd":
 		minvrate=1152
 		maxvrate=1152

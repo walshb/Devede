@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+# vim:noet:ts=8:sts=8:sw=8
 
 # Copyright 2006-2009 (C) Raster Software Vigo (Sergio Costas)
 # Copyright 2006-2009 (C) Peter Gill - win32 parts
@@ -42,10 +43,15 @@ if (sys.platform=="win32") or (sys.platform=="win64"):
 class main_window:
 	
 	def __init__(self,global_vars,callback):
-		
+
 		self.global_vars=global_vars
 		self.gladefile=global_vars["gladefile"]
-		
+		self.disctocreate = self.global_vars["disctocreate"]
+
+		if not self.gladefile:
+			self.tree = None
+			return
+
 		self.tree=devede_other.create_tree(self,"wmain",self.gladefile)
 		self.window=self.tree.get_object("wmain")
 
@@ -343,8 +349,9 @@ class main_window:
 
 		if size_error:
 			devede_dialogs.show_error(self.gladefile,_("Too many videos for this disc size.\nPlease, select a bigger disc type or remove some videos."))
-		
-		self.set_video_values()
+
+		if self.gladefile:
+			self.set_video_values()
 
 
 	def wmain_delete_event_cb(self,widget,signal):

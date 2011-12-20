@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+# vim:noet:ts=8:sts=8:sw=8
 
 # Copyright 2006-2009 (C) Raster Software Vigo (Sergio Costas)
 # Copyright 2006-2009 (C) Peter Gill - win32 parts
@@ -102,7 +103,17 @@ class load_save_config:
 	
 		
 		output.close()
-		
+
+		self.load_data(file_name, values, global_vars2)
+
+		if global_vars2.has_key("erase_files")==False:
+			w=self.tree.get_object("create_iso")
+			w.set_active(True)
+
+
+	def load_data(self, file_name, values, global_vars2):
+		"""Update data structures using values and global_vars2."""
+
 		not_found=[]
 		for element in values:
 			for element2 in element[1:]:
@@ -240,10 +251,6 @@ class load_save_config:
 			self.global_vars["menu_title_color"]=[0,0,0,65535]
 			self.global_vars["menu_title_text"]=""
 			self.global_vars["menu_title_fontname"]="Sans 14"
-
-		if global_vars2.has_key("erase_files")==False:
-			w=self.tree.get_object("create_iso")
-			w.set_active(True)
 
 		self.global_vars["struct_name"]=file_name # update the path
 		

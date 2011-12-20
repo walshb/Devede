@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+# vim:noet:ts=8:sts=8:sw=8
 
 # Copyright 2006-2007 (C) Raster Software Vigo (Sergio Costas)
 # Copyright 2006-2007 (C) Peter Gill - win32 parts
@@ -19,6 +20,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import pygtk # for testing GTK version number
 pygtk.require ('2.0')
 import gtk
@@ -27,9 +29,12 @@ import devede_other
 class show_error:
 	
 	def __init__(self,gladefile,message):
-		
 		""" Shows a window with an error """
-		
+
+		if not gladefile:
+			sys.stderr.write('%s\n' % (message,))
+			sys.exit(1)
+
 		self.newtree=devede_other.create_tree(self,"werror_dialog",gladefile,False)
 		label=self.newtree.get_object("label_error_dialog")
 		label.set_text(message)
