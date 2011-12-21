@@ -292,9 +292,9 @@ class executor:
 			readfhs = select.select(self.pipes, [], [], 0)[0]
 
 			if self.handle.stdout in readfhs:
-				outdata = [self.handle.stdout.readline(self.read_chars)]
+				outdata = [os.read(self.handle.stdout.fileno(), self.read_chars)]
 			if self.handle.stderr in readfhs:
-				errdata = [self.handle.stderr.readline(self.read_chars)]
+				errdata = [os.read(self.handle.stderr.fileno(), self.read_chars)]
 
 		if '' in outdata:
 			self.pipes.remove(self.handle.stdout)
@@ -390,7 +390,7 @@ class PipeThread(threading.Thread):
 		while True:
 			try:
 				timer = threading.Timer(10, self._alarm_handler)
-				data = self.fin.read(self.chars)
+				data = os.read(self.fin.fileno(), self.chars)
 				timer.cancel()
 				self._append_data(data)
 				if not data:
