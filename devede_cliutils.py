@@ -13,10 +13,13 @@ def handle_exception():
 
 class TextProgressBar(object):
     def set_text(self, text):
+        sys.stdout.flush()
         sys.stderr.write('%s\n' % (text,))
 
     def set_fraction(self, frac):
+        sys.stdout.flush()
         sys.stderr.write('%s\n' % (100.0 * frac,))
 
     def pulse(self):
+        sys.stdout.flush()
         sys.stderr.write('.')
