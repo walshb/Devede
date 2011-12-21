@@ -598,6 +598,7 @@ class create_all:
 
 		if not self.window:
 			sys.stderr.write('FINISHED.\n')
+			gtk.main_quit()
 			return
 
 		self.window.hide()
