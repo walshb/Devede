@@ -1,9 +1,9 @@
-.PHONY: all sync run
+.PHONY: all sync test
 
 all:
 
 sync:
 	MYDIR=`/bin/pwd`; rsync -auvz --exclude '.git/' habanero:src/Devede_blaptop/ $$MYDIR/; rsync -auvz --exclude '.git/' $$MYDIR/ habanero:src/Devede_blaptop/
 
-run:
+test:
 	./run_conv.sh test
