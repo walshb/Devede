@@ -50,7 +50,12 @@ def make_dvd(filename):
         newfile = devede_newfiles.newfile(global_vars['PAL'], global_vars['disctocreate'])
         newfile.init_properties_from_file(title_props['path'])
         for key in newfile.file_properties:
-            title_props[key] = newfile.file_properties[key]
+            if key in title_props:  # already overridden by user
+                sys.stderr.write('%s overridden in config file.\n' % key)
+                if key not in ('path', 'audio_stream', 'audio_list'):
+                    sys.exit(1)
+            else:
+                title_props[key] = newfile.file_properties[key]
 
     global_vars['use_ffmpeg'] = True
     global_vars['warning_ffmpeg'] = False
