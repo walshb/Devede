@@ -8,7 +8,9 @@ import optparse
 import locale
 import gettext
 import gtk
+import io
 
+import devede_file
 import devede_globals
 import devede_newfiles
 import devede_loadsave
@@ -38,24 +40,13 @@ def make_dvd(filename):
     global_vars = devede_globals.get_default_globals(pic_path, other_path, help_path)
     devede_globals.check_programs(global_vars)
 
-    fd = open(filename)
-    file_structure, file_globals = eval(fd.read())
-    fd.close()
+    fp = io.open(filename, 'rb', buffering=10)
+    file_structure, file_globals = devede_file.read(fp)
+    fp.close()
 
     structure = []
     loader = devede_loadsave.load_save_config(None, structure, global_vars, None)
     loader.load_data(filename, file_structure, file_globals)  # will update global_vars
-
-    for title_info, title_props in structure:
-        newfile = devede_newfiles.newfile(global_vars['PAL'], global_vars['disctocreate'])
-        newfile.init_properties_from_file(title_props['path'])
-        for key in newfile.file_properties:
-            if key in title_props:  # already overridden by user
-                sys.stderr.write('%s overridden in config file.\n' % key)
-                if key not in ('path', 'audio_stream', 'audio_list'):
-                    sys.exit(1)
-            else:
-                title_props[key] = newfile.file_properties[key]
 
     global_vars['use_ffmpeg'] = True
     global_vars['warning_ffmpeg'] = False
@@ -66,8 +57,9 @@ def make_dvd(filename):
     mainwin.structure = structure  # XXX refactor this
     mainwin.on_autosize_clicked(None)
 
-    for title_info, title_props in structure:
-        sys.stderr.write('set "%s" vrate = %s\n' % (title_info['nombre'], title_props['vrate']))
+    for title_data in structure:
+        for file_props in title_data[1:]:
+            sys.stderr.write('set "%s" vrate = %s\n' % (file_props['path'], file_props['vrate']))
 
     convertor = devede_convert.create_all(None, structure, global_vars, None)
     convertor.create_disc()
