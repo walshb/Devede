@@ -10,14 +10,26 @@ def get_number(line):
     return int(line[pos+1:])
 
 def get_cores():
+
     """ Returns the number of cores available in the system """
     if (sys.platform=="win32") or (sys.platform=="win64"):
         logical_cores = win32api.GetSystemInfo()[5] #Logical Cores
         return logical_cores
 
+    failed=False
     try:
         proc=open("/proc/cpuinfo","r")
     except:
+        failed=True
+
+
+    if failed:
+        # If can't read /proc/cpuinfo, try to use the multiprocessing module
+        try:
+            import multiprocessing
+            return multiprocessing.cpu_count()
+        except:
+            pass
         return 1 # if we can't open /PROC/CPUINFO, return only one CPU (just in case)
 
     siblings=1 # default values
