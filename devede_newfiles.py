@@ -321,8 +321,11 @@ class newfile(file_get_params):
 		self.file_properties["ofps2"]=self.file_values["ofps2"]
 		self.file_properties["filesize"]=os.stat(filename)[stat.ST_SIZE] # file size
 
-	def create_default_file_properties(self, filename):
-		self.init_properties_from_file(filename)  # properties of the file itself
+		return True, audio_tracks
+
+
+	def create_default_video_parameters(self, filename):
+		success, audio_tracks = self.init_properties_from_file(filename)  # properties of the file itself
 
 		if self.pal:
 			self.file_properties["fps"]=25
