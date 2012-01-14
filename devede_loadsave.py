@@ -26,10 +26,12 @@ import gtk
 import pickle
 import os
 import sys
+import io
 
 import devede_other
 import devede_dialogs
 import devede_newfiles
+import devede_file
 
 class load_save_config:
 	
@@ -59,7 +61,8 @@ class load_save_config:
 			
 			filter = gtk.FileFilter()
 			filter.add_pattern("*.devede")
-			filter.set_name(".devede")
+			filter.add_pattern("*.devede2")
+			filter.set_name(".devede2")
 			window.add_filter(filter)
 			
 			window.show()
@@ -75,35 +78,15 @@ class load_save_config:
 			window = None
 		
 		try:
-			output=open(file_name)
+			infp = io.open(file_name, 'rb', buffering=10)
 		except:
 			w = devede_dialogs.show_error(self.gladefile,_("Can't open the file."))
 			w = None
 			return
-	
-		try:
-			values=pickle.load(output)
-		except:
-			w = devede_dialogs.show_error(self.gladefile,_("That file doesn't contain a disc structure."))
-			w = None
-			return
-		
-		if values!="DeVeDe":
-			w = devede_dialogs.show_error(self.gladefile,_("That file doesn't contain a disc structure."))
-			w = None
-			return
-		
-		global_vars2={}
-		try:
-			values=pickle.load(output)
-			global_vars2=pickle.load(output)
-		except:
-			w = devede_dialogs.show_error(self.gladefile,_("That file doesn't contain a DeVeDe structure."))
-			w = None
-			return
-	
-		
-		output.close()
+
+		values, global_vars2 = devede_file.read(infp)
+
+		infp.close()
 
 		self.load_data(file_name, values, global_vars2)
 
@@ -131,11 +114,10 @@ class load_save_config:
 			newfile.init_properties_from_file(file_props['path'])
 			for key in newfile.file_properties:
 				if key in file_props:  # already overridden by user
-					sys.stderr.write('%s overridden in config file.\n' % key)
-					if key not in ('path', 'audio_stream', 'audio_list'):
-						sys.exit(1)
-				else:
-					file_props[key] = newfile.file_properties[key]
+					sys.stderr.write('%s in config file -- but ignoring this.\n' % key)
+#					if key not in ('path', 'audio_stream', 'audio_list'):
+#						sys.exit(1)
+				file_props[key] = newfile.file_properties[key]
 
 			if 'sub_list' not in file_props:
 				file_props["sub_list"] = []
@@ -248,7 +230,8 @@ class load_save_config:
 			
 			filter=gtk.FileFilter()
 			filter.add_pattern("*.devede")
-			filter.set_name(".devede")
+			filter.add_pattern("*.devede2")
+			filter.set_name(".devede2")
 			saveconfig=tree.get_object("wsaveconfig")
 			saveconfig.add_filter(filter)
 			saveconfig.set_do_overwrite_confirmation(True)
@@ -275,10 +258,8 @@ class load_save_config:
 			self.global_vars["struct_name"]=fname
 		
 		try:
-			output=open(self.global_vars["struct_name"],"wb")
-			id="DeVeDe"
-			pickle.dump(id,output)
-			pickle.dump(self.structure,output)
+			output = open(self.global_vars["struct_name"],"wb")
+
 			vars={}
 			vars["disctocreate"]=self.global_vars["disctocreate"]
 			vars["titlecounter"]=self.global_vars["titlecounter"]
@@ -314,7 +295,9 @@ class load_save_config:
 
 			print "Action: "+str(vars["action_todo"])
 			print "Variables: "+str(vars)
-			pickle.dump(vars,output)
+
+			devede_file.write(output, self.structure, vars, minimal=True)
+
 			output.close()
 		except:
 			w=devede_dialogs.show_error(self.gladefile,_("Can't save the file."))

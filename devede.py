@@ -70,6 +70,12 @@ if found==False:
 	except:
 		found=False
 
+tipo = 100  # something else
+pic_path = os.environ['HOME'] + '/opt/devede-head/share/devede'
+other_path = os.environ['HOME'] + '/opt/devede-head/share/devede'
+help_path = os.environ['HOME'] + '/opt/devede-head/share/doc/devede'
+
+
 if tipo==0:
 	#gettext.bindtextdomain('devede', '/usr/share/locale')
 	#Note also before python 2.3 you need the following if
@@ -126,14 +132,18 @@ elif tipo==2:
 	help_path=os.path.join(font_path,"doc")
 	print "Using direct files"
 	
-else:
-	print "Can't locate extra files. Aborting."
-	sys.exit(1)
+#else:
+#	print "Can't locate extra files. Aborting."
+#	sys.exit(1)
 
 
 #####################
 #   GetText Stuff   #
 #####################
+
+share_locale = './po/'
+glade = './interface'
+font_path = './'
 
 gettext.bindtextdomain('devede',share_locale)
 locale.setlocale(locale.LC_ALL,"")
@@ -185,6 +195,7 @@ except:
 	print "Failed to load module DEVEDE_FONTS"
 	sys.exit(1)
 
+import devede_globals
 
 home=devede_other.get_home_directory()
 
@@ -202,6 +213,8 @@ if pic_path[-1]!=os.sep:
 	pic_path+=os.sep
 
 global_vars = devede_globals.get_default_globals(pic_path, other_path, help_path, glade)
+
+global_vars[""]=""
 
 print "Cores: "+str(global_vars["cores"])
 
@@ -223,6 +236,7 @@ def program_exit(widget):
 	gtk.main_quit()
 
 
+errors = ''
 if errors!="":
 	arbol.add_from_file(os.path.join(glade,"wprograms.ui"))
 	w=arbol.get_object("programs_label")
