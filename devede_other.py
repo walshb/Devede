@@ -25,13 +25,13 @@
 ###########################################################################
 
 import os
-import subprocess
 import stat
 import sys
 import shutil
 import cairo
 import gtk
 import struct
+import shlex
 
 import devede_executor
 
@@ -232,9 +232,8 @@ class check_utf(devede_executor.executor):
 
 	
 	def convert_to_UTF8(self,infile_n,outfile_n,origin_format):
-		
-		command_line='iconv -f '+str(origin_format)+' -t UTF-8 "'+str(infile_n)+'" > "'+str(outfile_n)+'"'
-		return self.launch_shell(command_line).wait()
+		command = ['iconv', '-f', str(origin_format), '-t', 'UTF-8']
+		return self.launch_shell(command, stdinout=[str(infile_n), str(outfile_n)])
 	
 	
 	def convert_16_to_8(self,infile_n,outfile_n):
@@ -406,14 +405,13 @@ def check_program(programa):
 	""" This function allows to check that a program is available in the system, just
 	by calling it without arguments and checking the error returned """
 
-	if (sys.platform=="win32") or (sys.platform=="win64"):
-		launcher=devede_executor.executor()
-		p=launcher.launch_program(programa,win32arg=False)
-	else:
-		p=subprocess.Popen(programa+" >/dev/null 2>/dev/null",shell=True)
+	if isinstance(programa, str):
+		programa = shlex.split(programa)
 
-	p.wait()
-	return p.returncode
+	launcher=devede_executor.executor()
+	launcher.launch_program(programa,win32arg=False)
+
+	return launcher.wait_end()
 
 
 def load_config(global_vars):

@@ -1026,11 +1026,11 @@ class xml_files(devede_executor.executor):
 			comando.append(self.filefolder+self.filename+"_menu2_"+str(counter)+".mpg")
 			self.launch_program(comando)
 		else:
-			comando="spumux"
-			
-			comando+=' "' +self.filefolder+self.filename+'_menu_'+str(counter)+'.xml"'
+			comando = ["spumux"]
 
-			print "Launch: "+comando
+			comando.append(os.path.join(self.filefolder, self.filename + '_menu_' + str(counter) + '.xml'))
+
+			print "Launch: ", comando
 			self.launch_shell(comando,stdinout=[self.filefolder+self.filename+"_menu_"+str(counter)+".mpg",self.filefolder+self.filename+"_menu2_"+str(counter)+".mpg"])
 
 

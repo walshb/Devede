@@ -35,6 +35,11 @@ if (sys.platform=="win32") or (sys.platform=="win64"):
 import threading
 import gobject
 
+
+_log_fd = None
+_test_threads = False
+
+
 class executor:
 
 	""" Base class for all launchers (Mplayer, Mencoder, SPUmux, DVDauthor, mkisofs...). """
@@ -45,12 +50,23 @@ class executor:
 		# FILEFOLDER is the path where all the temporary and finall files will be created
 		# PROGRESBAR is the GtkProgressBar where the class will show the progress
 
+		global _log_fd
+
+		if _log_fd is None and filefolder is not None:
+			log_filename = os.path.join(filefolder, 'devede.log')
+			sys.stderr.write('\nlogging to %s\n' % log_filename)
+			_log_fd = open(log_filename, 'w')
+
 		self.initerror=False
 		self.handle=None
-		self.cadena=""
-		self.err_cadena=""
 		self.sep_stderr=False
 		self.platform_win32=((sys.platform=="win32") or (sys.platform=="win64"))
+		self._use_threads = self.platform_win32 or _test_threads
+
+		self.creationflags = 0
+		if self.platform_win32:
+			self.creationflags = win32process.CREATE_NO_WINDOW
+
 		self.print_error="Undefined error"
 		self.keep_output=False
 
@@ -67,6 +83,24 @@ class executor:
 			self.filefolder=None
 			self.printout=True
 
+
+	def _log_data(self, data):
+		if _log_fd:
+			_log_fd.write(data)
+			_log_fd.flush()
+
+
+	def _announce_launch(self, cmd, in_filename, out_filename):
+		if isinstance(cmd, list):
+			cmd = ' '.join(cmd)
+		if in_filename:
+			cmd += ' <%s' % in_filename
+		if out_filename:
+			cmd += ' >%s' % out_filename
+		self._log_data('\n\n%s\n\n' % cmd)
+		print "Launching program:", cmd
+
+
 	def cancel(self):
 
 		""" Called to kill this process. """
@@ -82,32 +116,37 @@ class executor:
 			os.kill(self.handle.pid,signal.SIGKILL)
 		
 	
-	def wait_end(self):
-		
-		""" Wait until the process ends """
-		
+	def _wait_end_internal(self):
+		"""Wait until the process ends.
+		Return the return code of the process."""
+
 		if self.handle==None:
 			return 0
-		
+
+		while self.pipes:
+			self._read_line_from_output()
+
+		if self.out_thread:
+			self._log_data('joining stdout thread\n')
+			self.out_thread.join()
+		if self.err_thread:
+			self._log_data('joining stderr thread\n')
+			self.err_thread.join()
+
 		self.handle.wait()
+
 		return self.handle.returncode
-	
-	
+
+
+	def wait_end(self):
+		return self._wait_end_internal()
+
+
 	def wait_end2(self):
-		
-		r1,r2=self.handle.communicate()
-		self.cadena=r1
-		if (self.sep_stderr):
-			self.err_cadena=r2
-		else:
-			self.cadena+=r2
-		if (self.printout):
-			print r1,
-		print r2,
+		return self.wait_end()
 
 
-	def launch_shell(self,program,read_chars=80,output=True,stdinout=None):
-		
+	def launch_shell(self,program,read_chars=1024,output=True,stdinout=None):
 		""" Launches a program from a command line shell. Usefull for programs like SPUMUX, which
 		takes the input stream from STDIN and gives the output stream to STDOUT, or for programs
 		like COPY, CP or LN """
@@ -115,51 +154,18 @@ class executor:
 		self.read_chars=read_chars
 		self.output=output
 		self.handle=None
-				
-		if stdinout!=None: # we want to apply a file as STDIN and another one as STDOUT
-			lprogram=program+' < "'+stdinout[0]+'" > "'+stdinout[1]+'"'
-			if (sys.platform=="win32") or (sys.platform=="win64"):
-				try:
-					pos=program.find(" ")
-					if pos==-1:
-						command=program
-					else:
-						command=program[:pos] # get the command itself (usually SPUMUX.EXE)
-					wd=sys.path[-1:] # Current working Directory.  To work with py2exe
-					b=os.path.join(wd[0], "bin", command)
-					lprogram=lprogram.replace(command, '"' + b + '"')
-					batfile=open(os.path.join(wd[0],"menu.bat"),"w")
-					batfile.write(lprogram)
-					batfile.close()
-				except:
-					return None
-				lprogram=os.path.join(wd[0],"menu.bat")
-		else:
-			lprogram=program
 
-		print "Launching shell program: "+str(lprogram)
-		print
+		in_filename = None
+		out_filename = None
+		if stdinout:
+			in_filename, out_filename = stdinout
+		self._popen(program, in_filename=in_filename, out_filename=out_filename)
 
-		try:
-			if output:
-				if (sys.platform=="win32") or (sys.platform=="win64"):
-					handle=MyPopen(lprogram,shell=False,bufsize=32767,stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=win32process.CREATE_NO_WINDOW)
-				else:
-					handle=subprocess.Popen(lprogram,shell=True,bufsize=32767,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-			else:
-				if (sys.platform=="win32") or (sys.platform=="win64"):
-					handle=subprocess.Popen(lprogram,shell=True,stdin=subprocess.PIPE, stdout=subprocess.PIPE, creationflags=win32process.CREATE_NO_WINDOW)
-				else:
-					handle=subprocess.Popen(lprogram,shell=True)
-		except OSError:
-			print "error launching shell\n\n\n\n"
-			pass
-		else:
-			self.handle=handle
-			return handle
+		if self.handle:
+			return self._wait_end_internal()
 
 		print "Fallo"
-		return None	
+		return None
 
 
 	def launch_program(self,program,read_chars=80,output=True,win32arg=True,with_stderr=True, sep_stderr=False,keep_out=False):
@@ -173,48 +179,76 @@ class executor:
 		self.sep_stderr=sep_stderr
 		self.keep_output=keep_out
 
+		self._popen(program, in_filename=None, out_filename=None)
+
+
+	def _popen(self, program, in_filename, out_filename):
+		assert isinstance(program, list)
+
+		bufsize = 4096
+
+		stdin = None
+		stdout = subprocess.PIPE
+		stderr = subprocess.PIPE
+
+		if in_filename:
+			stdin = open(in_filename)
+		if out_filename:
+			stdout = open(out_filename, 'w')
+
 		wd=sys.path[-1:] # working directory.  This works with py2exe
 		if (sys.platform=="win32") or (sys.platform=="win64"):
 			pathlist=[os.path.join(wd[0],"bin"),os.path.join(os.getcwd(),"bin"), r'C:\WINDOWS', r'C:\WINDOWS\system32', r'C:\WINNT']
 		else:
-			pathlist=["/usr/bin","/usr/local/bin","/usr/share/bin","/usr/share/local/bin","/bin",os.path.join(wd[0],"bin")]
+			pathlist = os.environ['PATH'].split(':')
 
-		print "Launching program: ",
-		for elemento in program:
-			print str(elemento),
-		print
+		self.out_thread = None
+		self.err_thread = None
+
+		self.cadena=""
+		self.err_cadena=""
+
+		self._announce_launch(program, in_filename, out_filename)
+
+		self._log_data('pathlist = %s\n' % (pathlist,))
 
 		for elemento in pathlist:
-			print "elemento: ", elemento
-			if elemento[-1]!=os.sep:
-				elemento+=os.sep
+			self._log_data("elemento: %s\n" % (elemento,))
+			full_path = os.path.join(elemento, program[0])
+			if not os.path.exists(full_path):
+				continue
+			program2=program[:]
+			program2[0] = full_path
+			self._log_data(' popen %s\n' % (program2,))
 			try:
-				program2=program[:]
-				program2[0]=elemento+program2[0]
-				if output:
-					if with_stderr:
-						if (sys.platform=="win32") or (sys.platform=="win64"):
-							handle=MyPopen(program2,executable=program2[0],shell=False,stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=win32process.CREATE_NO_WINDOW, threaded=win32arg, read=read_chars)
-						else:
-							handle=subprocess.Popen(program2,executable=program[0],shell=False,bufsize=32767,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-					else:
-						if (sys.platform=="win32") or (sys.platform=="win64"):
-							handle=MyPopen(program2,executable=program2[0],shell=False,stdin=subprocess.PIPE, stdout=subprocess.PIPE, creationflags=win32process.CREATE_NO_WINDOW, threaded=False, read=read_chars)
-						else:
-							handle=subprocess.Popen(program2,executable=program[0],shell=False,bufsize=32767,stdout=subprocess.PIPE)
-				else:
-					if (sys.platform=="win32") or (sys.platform=="win64"):
-						handle=MyPopen(program2,executable=program2[0],shell=False,creationflags=win32process.CREATE_NO_WINDOW, threaded=win32arg, read=read_chars)
-					else:
-						handle=subprocess.Popen(program2,executable=program[0],shell=False)
+				handle = subprocess.Popen(program2, bufsize=bufsize, \
+					creationflags=self.creationflags, \
+					stdin=stdin, stdout=stdout, stderr=stderr)
 			except OSError:
+				self._log_data('error launching %s\n' % (program2,))
 				print "error in launch program\n"
-				pass
-			else:
-				self.handle=handle
-				if (sys.platform=="win32") or (sys.platform=="win64"):
-					handle.set_priority()
-				return handle
+				continue
+
+			self.handle=handle
+			self.pipes = []
+			if stdout == subprocess.PIPE:
+				self.pipes.append(handle.stdout)
+			if stderr == subprocess.PIPE:
+				self.pipes.append(handle.stderr)
+			if self.platform_win32:
+				handle.set_priority()
+			if self._use_threads:
+				self._log_data('starting threads\n')
+				if stdout == subprocess.PIPE:
+					self.out_thread = PipeThread(handle.stdout, bufsize)
+					self.out_thread.start()
+				if stderr == subprocess.PIPE:
+					self.err_thread = PipeThread(handle.stderr, bufsize)
+					self.err_thread.start()
+
+			break
+
+		# Don't return any handle. The caller should call refresh or wait_end.
 		return None
 
 
@@ -224,69 +258,65 @@ class executor:
 
 		if self.handle==None:
 			return -1 # there's no program running
-		
-		if self.output==False: # if we don't want to read the output...
-			if (self.bar!=None):
-				self.bar.pulse() # just PULSE the progress bar
-			if self.handle.poll()==None:
-				return 0 # if the program didn't end, return 0
-			else:
-				return 1 # and 1 if the program ended
-		
-		ret_value=1
-		while self.handle.poll()==None:
-			ret_value=0
-			if self.read_line_from_output():
+
+		while self.pipes:
+			# keep calling _read_line_from_output to empty stdout and stderr
+			if self._read_line_from_output():
+				# nothing read this time
 				break
-			
-		if (self.set_progress_bar()): # progress_bar is defined in each subclass to fit the format
+
+		if not self.output:
+			self.bar.pulse()
+		elif self.set_progress_bar(): # progress_bar is defined in each subclass to fit the format
 			self.cadena=""
 		
-		if ret_value==1: # read what remains in the STDOUT and STDERR queues
-			r1,r2=self.handle.communicate()
-			self.cadena+=r1
-			if (self.sep_stderr):
-				self.err_cadena+=r2
-			else:
-				self.cadena+=r2
-			if (self.printout):
-				print r1,
-			print r2,
-		
-		return ret_value # 0: nothing to read; 1: program ended
+		if not self.pipes and self.handle.poll() is not None:
+			return 1 # process finished
 
-	
+		return 0 # 0: nothing to read; 1: program ended
 
-	def read_line_from_output(self):
-		if self.platform_win32:
-			v1 = self.handle.recv_some()
+	def _read_line_from_output(self):
+		"""Return True if nothing read."""
+
+		outdata = []
+		errdata = []
+
+		if self._use_threads:
+			if self.out_thread:
+				outdata = self.out_thread.get_data()
+			if self.err_thread:
+				errdata = self.err_thread.get_data()
 		else:
-			v1,v2,v3=select.select([self.handle.stderr,self.handle.stdout],[],[],0)
+			readfhs = select.select(self.pipes, [], [], 0)[0]
 
-		if len(v1)==0:
-			return True # nothing to read, so get out of the WHILE loop
-		
-		for element in v1:
-			if (sys.platform=="win32") or (sys.platform=="win64"):
-				readed = element#[0,self.read_chars]
-				if (self.sep_stderr) and (element==self.handle.stderr):
-					self.err_cadena+=readed
-				else:
-					self.cadena+=readed
-				if (self.printout) or (element==self.handle.stderr):
-					print readed,
-				break # this break statement and setting the priority lower in launch_program makes devede work a lot better on windows
+			if self.handle.stdout in readfhs:
+				outdata = [os.read(self.handle.stdout.fileno(), self.read_chars)]
+			if self.handle.stderr in readfhs:
+				errdata = [os.read(self.handle.stderr.fileno(), self.read_chars)]
+
+		if '' in outdata:
+			self.pipes.remove(self.handle.stdout)
+		if '' in errdata:
+			self.pipes.remove(self.handle.stderr)
+
+		outdata = ''.join(outdata)
+		errdata = ''.join(errdata)
+
+		self._log_data(outdata)
+		self._log_data(errdata)
+
+		if self.output:
+			self.cadena += outdata
+
+			if self.sep_stderr:
+				self.err_cadena += errdata
 			else:
-				readed=element.readline(self.read_chars)
-				if (self.sep_stderr) and (element==self.handle.stderr):
-					self.err_cadena+=readed
-				else:
-					self.cadena+=readed
-				if (self.printout) or (element==self.handle.stderr):
-					print readed,
+				self.cadena += errdata
 
-		return False
-	
+		res = (len(outdata) + len(errdata) > 0)
+
+		return not res
+
 
 	def set_progress_bar(self):
 		
@@ -346,103 +376,47 @@ class executor:
 		return output
 
 
-class MyPopen(subprocess.Popen):
-
-	class Sender(gobject.GObject):
-		def __init__(self):
-			self.__gobject_init__()
-	
-	class PipeThread(threading.Thread):
-		def __init__(self, parent, fin, chars=80):
-			threading.Thread.__init__(self)
-			self.chars=chars
-			self.fin = fin
-			self.sout = []
-			self.parent = parent
-			self.sender = parent.Sender()
-			self.sender.connect("z_signal", parent.read_callback)
-			#self.sout = ""
-			
-		def run(self):
-			self.sender.connect("z_signal", self.parent.read_callback)
-			while True:
-				try:
-					timer = threading.Timer(10, self.__alarm_handler)
-					temp=self.fin.read(self.chars)
-					if not temp: self.sout.append("")
-					if not temp: break
-					self.sender.emit("z_signal", temp)
-					timer.cancel()
-				except Exception, e:
-					if not str(e) == 'timeout':  # something else went wrong ..
-						pass
-						#raise # got the timeout exception from alarm .. proc is hung; kill it
-					break
-					
-		def __alarm_handler(self):
-			print "Process read timeout exception"
-			raise Exception("timeout")
-
-		def get_output(self):
-			return self.sout
-				
-		def reset(self):
-			self.sout = []
-			#self.sout = ""
-		
-	def __init__(self, args=None, bufsize=0, executable=None, stdin=None, stdout=None, stderr=None, preexec_fn=None, close_fds=False, shell=False, cwd=None, env=None, universal_newlines=False, startupinfo=None, creationflags=0, threaded=True, read=80):
-		subprocess.Popen.__init__(self,args=args, bufsize=bufsize, executable=executable, stdin=stdin, stdout=stdout, stderr=stderr, preexec_fn=preexec_fn, close_fds=close_fds, shell=shell, cwd=cwd, env=env, universal_newlines=universal_newlines, startupinfo=startupinfo, creationflags=creationflags)
-		
+class PipeThread(threading.Thread):
+	def __init__(self, fin, chars=1024):
+		threading.Thread.__init__(self)
+		self.chars=chars
+		self.fin = fin  # file in
 		self.sout = []
 		self.lock = threading.Lock()
-		
-		if not threaded:
-			pass
-		else:
+
+	def run(self):
+		while True:
 			try:
-				gobject.type_register(self.Sender)
-				gobject.signal_new("z_signal", self.Sender, gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (object,))
-			except:
-				print "Error registering z_signal"
-			
-			self.out_pipe, self.err_pipe = self.PipeThread(self, self.stdout, read), self.PipeThread(self, self.stderr)
-			self.out_pipe.start(), self.err_pipe.start()
-	
-	def read_callback(self, object, data):
-		self.__set_data(data)
-		#print "Data Received:", data
-	
-	def __set_data(self, data):
-		
+				timer = threading.Timer(10, self._alarm_handler)
+				data = os.read(self.fin.fileno(), self.chars)
+				timer.cancel()
+				self._append_data(data)
+				if not data:
+					break
+			except Exception, e:
+				if not str(e) == 'timeout':  # something else went wrong ..
+					pass
+					#raise # got the timeout exception from alarm .. proc is hung; kill it
+				break
+
+	def _alarm_handler(self):
+		print "Process read timeout exception"
+		raise Exception("timeout")
+
+	def _append_data(self, data):
+		"""Appends to data. Not necessary to emit a GTK signal,
+		as there's no GUI work to be done."""
 		self.lock.acquire()
 		self.sout.append(data)
 		self.lock.release()
-		
-	def __get_data(self):
+
+	def get_data(self):
+		"""Gets and clears data."""
 		self.lock.acquire()
 		out = self.sout
 		self.sout = []
 		self.lock.release()
 		return out
-	
-	def is_data(self):
-		self.lock.acquire()
-		value = self.sout
-		self.lock.release()
-		if len(value) > 0:
-			return True
-		return False
-	
-	def recv_some(self):
-		"""
-		Returns a copy of the lists holding stdout and stderr
-		Before returning it clears the original lists
-		"""
-
-		out = self.__get_data()
-		time.sleep(0.02)
-		return out #[out, err]
-
 
 	def set_priority(self, pid=None, priority=0):
 

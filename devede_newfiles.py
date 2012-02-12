@@ -99,15 +99,14 @@ class file_get_params(devede_executor.executor):
 		else:
 			command="mplayer"
 		launcher=[command, "-loop","1","-identify", "-ao", "null", "-vo", "null", "-frames", str(nframes), filename]
-		handler=self.launch_program(launcher, win32arg=False,with_stderr=False)
+		self.launch_program(launcher, win32arg=False,with_stderr=False)
+		self.wait_end()
 
 		minimum_audio=10000
 		audio_list=[]
-		while True:
-			linea=handler.stdout.readline()
+		for linea in self.cadena.split('\n'):
 			linea=self.remove_ansi(linea)
-			if linea=="":
-				break
+
 			position=linea.find("ID_")
 			if position==-1:
 				continue
@@ -145,9 +144,7 @@ class file_get_params(devede_executor.executor):
 				if minimum_audio>audio_track:
 					minimum_audio=audio_track
 				audio_list.append(audio_track)
-				
-		handler.wait()
-		
+
 		if (video==0) or (width==0) or (height==0):
 			if (audio!=0):
 				self.length=length
@@ -182,7 +179,9 @@ class newfile(file_get_params):
 		""" This class manages every new film added. It reads its parameters (resolution, FPS, number of
 		channels...) and allows to generate the default values, both when choosing manually a file from the
 		Properties window, or when dragging&dropping them into the main window """
-		
+
+		file_get_params.__init__(self)
+
 		self.pal=pal
 		self.disctocreate=disctocreate
 		self.file_values=None
