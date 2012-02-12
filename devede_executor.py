@@ -89,8 +89,7 @@ class executor:
 		if _log_fd:
 			_log_fd.write(data)
 			_log_fd.flush()
-		else:
-			sys.stderr.write(data)
+
 
 	def _announce_launch(self, cmd, in_filename, out_filename):
 		if isinstance(cmd, list):
