@@ -36,6 +36,7 @@ import threading
 import gobject
 
 
+_log_filename = None
 _log_fd = None
 _test_threads = False
 
@@ -50,12 +51,14 @@ class executor:
 		# FILEFOLDER is the path where all the temporary and finall files will be created
 		# PROGRESBAR is the GtkProgressBar where the class will show the progress
 
-		global _log_fd
+		global _log_fd, _log_filename
 
-		if _log_fd is None and filefolder is not None:
-			log_filename = os.path.join(filefolder, 'devede.log')
-			sys.stderr.write('\nlogging to %s\n' % log_filename)
-			_log_fd = open(log_filename, 'w')
+		if filefolder is not None:
+			new_log_filename = os.path.join(filefolder, 'devede.log')
+			if new_log_filename != _log_filename:
+				_log_filename = new_log_filename
+				sys.stderr.write('\nlogging to %s\n' % _log_filename)
+				_log_fd = open(_log_filename, 'w')
 
 		self.initerror=False
 		self.handle=None
