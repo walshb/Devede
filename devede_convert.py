@@ -328,9 +328,9 @@ class create_all:
 		self.filename.replace("/","_")
 		self.filename.replace("|","_")
 		self.filename.replace("\\","_")
-		
-		filefolder=wdir.get_current_folder()
-		
+
+		filefolder = wdir.get_filename()
+
 		wfolder_dialog.hide()
 		wfolder_dialog.destroy()
 		if value!=-6:
@@ -397,6 +397,9 @@ class create_all:
 		filefolder = self.global_vars['finalfolder']  # parent of folder where we build disk
 
 		filefolder2 = os.path.join(filefolder, self.filename)
+
+		print "filefolder =", filefolder, "self.filename =", self.filename, "filefolder2 =", filefolder2
+
 		self.filefolder = filefolder2
 		if not self.filefolder.endswith(os.sep):
 			self.filefolder += os.sep
