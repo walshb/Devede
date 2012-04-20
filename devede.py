@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 # vim:noet:ts=8:sts=8:sw=8
 
 # Copyright 2006-2009 (C) Raster Software Vigo (Sergio Costas)
@@ -23,6 +23,19 @@
 
 import sys
 import os
+
+bindir = os.path.abspath(os.path.dirname(sys.argv[0]))
+
+# these will be changed before installation
+pkglibdir = bindir
+pkgdatadir = os.path.join(bindir, 'pixmaps')
+docdir = os.path.join(bindir, 'docs')
+localedir = os.path.join(bindir, 'po')
+glade = os.path.join(bindir, 'interface')
+font_path = bindir
+
+sys.path.append(pkglibdir)
+
 import pygtk # for testing GTK version number
 pygtk.require ('2.0')
 import gtk
@@ -41,118 +54,18 @@ if (sys.platform!="win32") and (sys.platform!="win64"):
 	except:
 		print "Locale not defined"
 
-# append the directories where we install the devede's own modules
-tipo=-1
-
-try:
-	fichero=open("./interface/wmain.ui","r")
-	fichero.close()
-	tipo=2
-	found=True
-except:
-	found=False	
-
-if found==False:
-	try:
-		fichero=open("/usr/share/devede/wmain.ui","r")
-		fichero.close()
-		tipo=0
-		found=True
-	except:
-		found=False
-
-if found==False:
-	try:
-		fichero=open("/usr/local/share/devede/wmain.ui","r")
-		fichero.close()
-		tipo=1
-		found=True
-	except:
-		found=False
-
-tipo = 100  # something else
-pic_path = os.environ['HOME'] + '/opt/devede-head/share/devede'
-other_path = os.environ['HOME'] + '/opt/devede-head/share/devede'
-help_path = os.environ['HOME'] + '/opt/devede-head/share/doc/devede'
-
-
-if tipo==0:
-	#gettext.bindtextdomain('devede', '/usr/share/locale')
-	#Note also before python 2.3 you need the following if
-	#you need translations from non python code (glibc,libglade etc.)
-	#there are other access points to this function
-	#gtk.glade.bindtextdomain("devede","/usr/share/locale")
-	#arbol=gtk.Builder("/usr/share/devede/devede.glade",domain="devede")
-	# append the directories where we install the devede's own modules
-
-	share_locale="/usr/share/locale"
-	glade="/usr/share/devede"
-	sys.path.append("/usr/lib/devede")
-	font_path="/usr/share/devede"
-	pic_path="/usr/share/devede"
-	other_path="/usr/share/devede"
-	help_path="/usr/share/doc/devede"
-	print "Using package-installed files"
-	
-elif tipo==1:
-	# if the files aren't at /usr, try with /usr/local
-	#gettext.bindtextdomain('devede', '/usr/share/locale')
-	#Note also before python 2.3 you need the following if
-	#you need translations from non python code (glibc,libglade etc.)
-	#there are other access points to this function
-	#gtk.glade.bindtextdomain("devede","/usr/share/locale")
-	#arbol=gtk.Builder("/usr/local/share/devede/devede.glade",domain="devede")
-
-	share_locale="/usr/share/locale" # Are you sure?
-	# if the files aren't at /usr, try with /usr/local
-	glade="/usr/local/share/devede"
-	sys.path.append("/usr/local/lib/devede")
-	font_path="/usr/local/share/devede"
-	pic_path="/usr/local/share/devede"
-	other_path="/usr/local/share/devede"
-	help_path="/usr/local/share/doc/devede"
-	print "Using local-installed files"
-	
-elif tipo==2:
-	# if the files aren't at /usr/local, try with ./
-	#gettext.bindtextdomain('devede', './po/')
-	#Note also before python 2.3 you need the following if
-	#you need translations from non python code (glibc,libglade etc.)
-	#there are other access points to this function
-	#gtk.glade.bindtextdomain("devede","/usr/share/locale")
-	#arbol=gtk.Builder("./devede.glade",domain="devede")
-	
-	# if the files aren't at /usr/local, try with ./
-	share_locale="./po/"
-	glade="./interface"
-	sys.path.append(os.getcwd())#("./")
-	font_path=os.getcwd()#"./"
-	pic_path=os.path.join(font_path, "pixmaps") #pic_path=font_path
-	other_path=os.path.join(font_path,"pixmaps")
-	help_path=os.path.join(font_path,"doc")
-	print "Using direct files"
-	
-#else:
-#	print "Can't locate extra files. Aborting."
-#	sys.exit(1)
-
-
 #####################
 #   GetText Stuff   #
 #####################
 
-share_locale = './po/'
-glade = './interface'
-font_path = './'
-
-gettext.bindtextdomain('devede',share_locale)
+gettext.bindtextdomain('devede', localedir)
 locale.setlocale(locale.LC_ALL,"")
 gettext.textdomain('devede')
-gettext.install("devede",localedir=share_locale) # None is sys default locale
+gettext.install("devede",localedir=localedir) # None is sys default locale
 #   Note also before python 2.3 you need the following if
 #   you need translations from non python code (glibc,libglade etc.)
 #   there are other access points to this function
-#gtk.glade.bindtextdomain("devede",share_locale)
+#gtk.glade.bindtextdomain("devede", localedir)
 
 arbol=gtk.Builder()
 arbol.set_translation_domain("devede")
@@ -162,39 +75,13 @@ arbol.set_translation_domain("devede")
 #   The following shortcut are usually used:
 _ = gettext.gettext
 
-try:
-	import devede_other
-except:
-	print "Failed to load modules DEVEDE_OTHER. Exiting"
-	sys.exit(1)
-try:
-	import devede_convert
-except:
-	print "Failed to load modules DEVEDE_CONVERT. Exiting"
-	sys.exit(1)
-try:
-	import devede_newfiles
-except:
-	print "Failed to load module DEVEDE_NEWFILES. Exiting"
-	sys.exit(1)
-try:
-	import devede_xml_menu
-except:
-	print "Failed to load module DEVEDE_XML_MENU"
-	sys.exit(1)
 
-try:
-	import devede_disctype
-except:
-	print "Failed to load module DEVEDE_DISCTYPE"
-	sys.exit(1)
-
-try:
-	import devede_fonts
-except:
-	print "Failed to load module DEVEDE_FONTS"
-	sys.exit(1)
-
+import devede_other
+import devede_convert
+import devede_newfiles
+import devede_xml_menu
+import devede_disctype
+import devede_fonts
 import devede_globals
 
 home=devede_other.get_home_directory()
@@ -209,19 +96,13 @@ home=devede_other.get_home_directory()
 # arbol
 # structure
 
-if pic_path[-1]!=os.sep:
-	pic_path+=os.sep
-
-global_vars = devede_globals.get_default_globals(pic_path, other_path, help_path, glade)
+global_vars = devede_globals.get_default_globals(pkgdatadir, docdir, glade)
 
 global_vars[""]=""
 
 print "Cores: "+str(global_vars["cores"])
 
-if font_path[-1]!=os.sep:
-	font_path+=os.sep
-font_path+="devedesans.ttf"
-global_vars["font_path"]=font_path
+global_vars["font_path"] = os.path.join(font_path, 'devedesans.ttf')
 
 print "Entro en fonts"
 fonts_found=devede_fonts.prepare_devede_font(home,font_path)

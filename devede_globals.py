@@ -64,13 +64,13 @@ def get_cores():
         return int(ncores)
 
 
-def get_default_globals(pic_path, other_path, help_path, glade=None):
+def get_default_globals(pic_path, help_path, glade=None):
     global_vars = {}
 
     global_vars["PAL"]=True
     global_vars["disctocreate"]=""
     global_vars["path"]=pic_path
-    global_vars["install_path"]=other_path
+    global_vars["install_path"]=pic_path
     global_vars["menu_widescreen"]=False
     global_vars["gladefile"]=glade
     global_vars["erase_temporary_files"]=True

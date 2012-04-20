@@ -2,6 +2,20 @@
 
 import sys
 import os
+
+bindir = os.path.abspath(os.path.dirname(sys.argv[0]))
+
+# these will be changed before installation
+pkglibdir = bindir
+pkgdatadir = os.path.join(bindir, 'pixmaps')
+docdir = os.path.join(bindir, 'docs')
+localedir = os.path.join(bindir, 'po')
+
+sys.path.append(pkglibdir)
+
+# prevent gtk issues
+del os.environ['DISPLAY']
+
 import cPickle
 import pprint
 import optparse
@@ -17,27 +31,19 @@ import devede_loadsave
 import devede_convert
 import devede_main
 
-share_locale = './po/'
-gettext.bindtextdomain('devede',share_locale)
+gettext.bindtextdomain('devede', localedir)
 locale.setlocale(locale.LC_ALL,"")
 gettext.textdomain('devede')
-gettext.install("devede",localedir=share_locale)
+gettext.install("devede", localedir=localedir)
 
 _ = gettext.gettext
 
 def make_dvd(filename):
-    ##pic_path = './pixmaps'
-    ##other_path = '.'
-    ##help_path = '.'
-    pic_path = os.environ['HOME'] + '/opt/devede-head/share/devede'
-    other_path = os.environ['HOME'] + '/opt/devede-head/share/devede'
-    help_path = os.environ['HOME'] + '/opt/devede-head/share/doc/devede'
+    assert os.path.exists(os.path.join(pkgdatadir, 'silence.ogg'))
+    assert os.path.exists(os.path.join(pkgdatadir, 'base_pal.mpg'))
+    assert os.path.exists(os.path.join(docdir, 'html', 'basic.html'))
 
-    assert os.path.exists(os.path.join(pic_path, 'silence.ogg'))
-    assert os.path.exists(os.path.join(other_path, 'base_pal.mpg'))
-    assert os.path.exists(os.path.join(help_path, 'html', 'basic.html'))
-
-    global_vars = devede_globals.get_default_globals(pic_path, other_path, help_path)
+    global_vars = devede_globals.get_default_globals(pkgdatadir, docdir)
     devede_globals.check_programs(global_vars)
 
     fp = io.open(filename, 'rb', buffering=10)
