@@ -114,8 +114,8 @@ class load_save_config:
 			newfile.init_properties_from_file(file_props['path'])
 			for key in newfile.file_properties:
 				if key in file_props:  # already overridden by user
-					sys.stderr.write('%s in config file -- but ignoring this.\n' % key)
-#					if key not in ('path', 'audio_stream', 'audio_list'):
+					if key not in ('path', 'audio_stream', 'audio_list'):
+						sys.stderr.write('"%s" in config file -- but ignoring this.\n' % key)
 #						sys.exit(1)
 				file_props[key] = newfile.file_properties[key]
 
