@@ -358,6 +358,8 @@ class create_all:
 				(self.main_window_callback)()
 				return False
 
+		return True
+
 	def create_disc(self):
 
 		self.time=0
@@ -390,7 +392,8 @@ class create_all:
 				return False
 
 		if self.gladefile:
-			self._ask_folder()
+			if not self._ask_folder():
+				return False
 		else:
 			self.filename = self.global_vars['outputname']
 
