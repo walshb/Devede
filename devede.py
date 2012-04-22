@@ -83,6 +83,7 @@ import devede_xml_menu
 import devede_disctype
 import devede_fonts
 import devede_globals
+import devede_file
 
 home=devede_other.get_home_directory()
 
@@ -97,6 +98,7 @@ home=devede_other.get_home_directory()
 # structure
 
 global_vars = devede_globals.get_default_globals(pkgdatadir, docdir, glade)
+devede_file.init_defaults(global_vars)
 
 global_vars[""]=""
 
