@@ -2,6 +2,7 @@ import sys
 
 import devede_other
 
+#### PASTE1
 def get_number(line):
     pos=line.find(":")
     if pos==-1:
@@ -62,11 +63,13 @@ def get_cores():
         return 1
     else:
         return int(ncores)
-
+#### ENDPASTE1
 
 def get_default_globals(pic_path, help_path, glade=None):
     global_vars = {}
+    other_path = pic_path
 
+#### PASTE2
     global_vars["PAL"]=True
     global_vars["disctocreate"]=""
     global_vars["path"]=pic_path
@@ -96,6 +99,8 @@ def get_default_globals(pic_path, help_path, glade=None):
     global_vars["menu_right_margin"]=0.1
 
     global_vars['multicore'] = 1
+
+#### ENDPASTE2
 
     return global_vars
 
