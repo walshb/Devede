@@ -1,4 +1,4 @@
-# Copyright (C) 2010 Canonical Ltd
+# Copyright (C) 2012 Ben Walsh
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,7 +22,20 @@ from mago import TestCase
 import unittest
 import ldtp
 import sys
+import os
 import subprocess
+
+import util
+
+
+def _get_file_and_subs():
+    vid_fname = os.path.join(os.getcwd(), 'myvideo.avi')
+    sub_fname = os.path.join(os.getcwd(), 'myvideo.srt')
+
+    util.create_video(vid_fname)
+    util.create_subs(sub_fname)
+
+    return vid_fname, sub_fname
 
 
 def _show_objects(win_name):
@@ -76,6 +89,8 @@ class TestMinimal(TestCase):
         This test verifies True is True. If it fails, then reinstall your system.
         """
 
+        vid_fname, sub_fname = _get_file_and_subs()
+
         subprocess.call(['rm', '-rf', '/var/tmp/devede_test'])
 
         _click('frmDisctypeselection', 'btnVideoDVD*')
@@ -92,7 +107,7 @@ class TestMinimal(TestCase):
 
         sys.stderr.write('%s\n' % (ldtp.getwindowlist(),))
 
-        _choosefile('myfilm.avi')
+        _choosefile(vid_fname)
 
         _click('frmFileproperties', 'btnAdd')  # add subtitles
 
@@ -102,7 +117,7 @@ class TestMinimal(TestCase):
 
         _click('dlg*', 'btn(None)')  # no subtitles filename yet
 
-        _choosefile('myfilm.srt')
+        _choosefile(sub_fname)
 
         _click('dlg*', 'btnOK')
 

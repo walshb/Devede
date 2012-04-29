@@ -9,4 +9,4 @@ test:
 	./run_conv.sh test
 
 mago:
-	export PATH=`/bin/pwd`:$$HOME/src/mago/bin:$$PATH; export PYTHONPATH=`/bin/pwd`:$$HOME/src/mago:$$HOME/src/ldtp2; mago --pdb tests/mago/test_simple.py
+	export PATH=`/bin/pwd`:$$HOME/src/mago/bin:$$PATH; export PYTHONPATH=`/bin/pwd`:$$HOME/src/mago:$$HOME/src/ldtp2; python -m mago.core --pdb tests/mago/test_simple.py
