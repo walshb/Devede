@@ -1,3 +1,4 @@
+import os
 import io
 import cPickle
 import ConfigParser
@@ -60,13 +61,13 @@ _output_prop_defaults = {'PAL': True,
     'finalfolder': '',
     'fontname': 'Sans 12',
     'menu_alignment': 2,
-    'menu_bg': '/home/walshb/opt/devede-head/share/devede/backgrounds/default_bg.png',
+    'menu_bg': '',
     'menu_bgcolor': [0, 0, 0, 49152],
     'menu_font_color': [65535, 65535, 65535, 65535],
     'menu_halignment': 2,
     'menu_selc_color': [0, 65535, 65535, 65535],
     'menu_shadow_color': [0, 0, 0, 0],
-    'menu_sound': '/home/walshb/opt/devede-head/share/devede/silence.ogg',
+    'menu_sound': '',
     'menu_title_color': [0, 0, 0, 65535],
     'menu_title_fontname': 'Sans 14',
     'menu_title_shadow': [0, 0, 0, 0],
@@ -76,13 +77,124 @@ _output_prop_defaults = {'PAL': True,
     'titlecounter': 3,
     'with_menu': True}
 
+
+class ArgNode(object):
+    def __init__(self):
+        self.props = {}
+        self.children = []
+        self.parent = None
+        self.level = 0
+
+
+    def addchild(self):
+        child = ArgNode()
+        child.parent = self
+        child.level = self.level + 1
+        self.children.append(child)
+        return child
+
+
+class ArgException(Exception):
+    pass
+
+
+# 0  1          2      3     4
+#    structure  title  file  subtitle
+#    output
+class ArgParser(object):
+    def __init__(self):
+        self.root = ArgNode()
+        self.node = self.root
+
+
+    def _tolevel(self, level):
+        """Create a new node at level"""
+        while self.node.level >= level:
+            self.node = self.node.parent
+        while self.node.level < level:
+            self.node = self.node.addchild()
+
+
+    def _nodes_to_structure(self):
+        if len(self.root.children) != 2:
+            raise ArgException('missing --output args')
+
+        struct_node, output_node = self.root.children
+
+        structure = []
+        for title_node in struct_node.children:
+            if not title_node.children or not title_node.children[0].props:
+                # user didn't provide file props
+                continue
+
+            title_data = [_conv_and_defaults(title_node.props, _title_prop_defaults, _title_info_aliases)]
+            for file_node in title_node.children:
+                sub_list = []
+                for sub_node in file_node.children:
+                    sub_list.append(_conv_and_defaults(sub_node.props, _sub_prop_defaults))
+
+                file_props = _conv_and_defaults(file_node.props, _file_prop_defaults)
+                file_props['sub_list'] = sub_list
+
+                title_data.append(file_props)
+
+            structure.append(title_data)
+
+        output_props = _conv_and_defaults(output_node.props, _output_prop_defaults)
+
+        print structure, output_props
+
+        return structure, output_props
+
+
+    def parse_args(self, args):
+        # start at file level
+        self._tolevel(3)
+        arg_to_level = {'--title': 2, '--file': 3, '--subtitle': 4, '--output': 1}
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            i += 1
+            if not arg.startswith('--'):
+                raise ArgException('unknown option %s' % arg)
+            if arg in arg_to_level:
+                self._tolevel(arg_to_level[arg])
+                continue
+            if '=' in arg:
+                key, val = arg.split('=')
+            else:
+                if i >= len(args):
+                    raise ArgException('option %s missing value' % arg)
+                key = arg
+                val = args[i]
+                i += 1
+            self.node.props[key[2:].replace('-', '_')] = val
+
+        res = self._nodes_to_structure()
+
+        return res
+
+
+def parse_args(args):
+    parser = ArgParser()
+    return parser.parse_args(args)
+
+
+def init_defaults(global_vars):
+    _output_prop_defaults['menu_bg'] = os.path.join(global_vars['path'], 'backgrounds', 'default_bg.png')
+    _output_prop_defaults['menu_sound'] = os.path.join(global_vars['path'], 'silence.ogg')
+
+
 def _val_like(v, default):
     if isinstance(default, (bool, list)):
         return eval(v)
     return type(default)(v)
 
 
-def _conv_and_defaults(d, defaults, aliases):
+def _conv_and_defaults(d, defaults, aliases=None):
+    if aliases is None:
+        aliases = {}
+
     res = {}
 
     for key in d:
@@ -138,9 +250,9 @@ def read_new(fp):
         for file_sec_name, file_d in _multiple_sections(conf, title_sec_name + '.file'):
             sub_list = []
             for subs_sec_name, subs_d in _multiple_sections(conf, file_sec_name + '.subtitles'):
-                sub_list.append(_conv_and_defaults(subs_d, _sub_prop_defaults, {}))
+                sub_list.append(_conv_and_defaults(subs_d, _sub_prop_defaults))
 
-            file_props = _conv_and_defaults(file_d, _file_prop_defaults, {})
+            file_props = _conv_and_defaults(file_d, _file_prop_defaults)
             file_props['sub_list'] = sub_list
 
             title_data.append(file_props)
@@ -148,7 +260,7 @@ def read_new(fp):
         structure.append(title_data)
 
     output_d = _section_dict(conf, 'output')
-    output_props = _conv_and_defaults(output_d, _output_prop_defaults, {})
+    output_props = _conv_and_defaults(output_d, _output_prop_defaults)
 
     return structure, output_props
 

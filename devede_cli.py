@@ -38,17 +38,28 @@ gettext.install("devede", localedir=localedir)
 
 _ = gettext.gettext
 
-def make_dvd(filename):
+def main():
+    if len(sys.argv) == 1:
+        sys.stderr.write('usage: devede_cli filename|args...\n')
+        return 1
+
     assert os.path.exists(os.path.join(pkgdatadir, 'silence.ogg'))
     assert os.path.exists(os.path.join(pkgdatadir, 'base_pal.mpg'))
     assert os.path.exists(os.path.join(docdir, 'html', 'basic.html'))
 
     global_vars = devede_globals.get_default_globals(pkgdatadir, docdir)
-    devede_globals.check_programs(global_vars)
+    devede_file.init_defaults(global_vars)
 
-    fp = io.open(filename, 'rb', buffering=10)
-    file_structure, file_globals = devede_file.read(fp)
-    fp.close()
+    filename = None
+    if sys.argv[1].startswith('--'):
+        file_structure, file_globals = devede_file.parse_args(sys.argv[1:])
+    else:
+        filename = sys.argv[1]
+        fp = io.open(filename, 'rb', buffering=10)
+        file_structure, file_globals = devede_file.read(fp)
+        fp.close()
+
+    devede_globals.check_programs(global_vars)
 
     structure = []
     loader = devede_loadsave.load_save_config(None, structure, global_vars, None)
@@ -72,13 +83,7 @@ def make_dvd(filename):
 
     gtk.main()
 
-
-def main():
-    parser = optparse.OptionParser()
-
-    options, args = parser.parse_args()
-
-    make_dvd(args[0])
+    return 0
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
