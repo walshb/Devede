@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+# vim:noet:ts=8:sts=8:sw=8
 
 # Copyright 2006-2009 (C) Raster Software Vigo (Sergio Costas)
 # Copyright 2006-2009 (C) Peter Gill - win32 parts
@@ -466,7 +467,7 @@ class video_converter_ffmpeg(devede_executor.executor):
 				command_var.append("2")
 	
 			if (vcd==False):
-				command_var.append("-b")
+				command_var.append("-b:v")
 				command_var.append(str(videorate)+"000")
 		
 			#if disctype!="divx":

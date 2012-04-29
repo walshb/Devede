@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+# vim:noet:ts=8:sts=8:sw=8
 
 # Copyright 2006-2009 (C) Raster Software Vigo (Sergio Costas)
 # Copyright 2006-2009 (C) Peter Gill - win32 parts
@@ -99,15 +100,14 @@ class file_get_params(devede_executor.executor):
 		else:
 			command="mplayer"
 		launcher=[command, "-loop","1","-identify", "-ao", "null", "-vo", "null", "-frames", str(nframes), filename]
-		handler=self.launch_program(launcher, win32arg=False,with_stderr=False)
+		self.launch_program(launcher, win32arg=False,with_stderr=False)
+		self.wait_end()
 
 		minimum_audio=10000
 		audio_list=[]
-		while True:
-			linea=handler.stdout.readline()
+		for linea in self.cadena.split('\n'):
 			linea=self.remove_ansi(linea)
-			if linea=="":
-				break
+
 			position=linea.find("ID_")
 			if position==-1:
 				continue
@@ -145,9 +145,7 @@ class file_get_params(devede_executor.executor):
 				if minimum_audio>audio_track:
 					minimum_audio=audio_track
 				audio_list.append(audio_track)
-				
-		handler.wait()
-		
+
 		if (video==0) or (width==0) or (height==0):
 			if (audio!=0):
 				self.length=length
@@ -280,7 +278,7 @@ class newfile(file_get_params):
 		return resx,resy,use_widescreen,vrate,arate
 
 
-	def create_default_video_parameters(self,filename):
+	def init_properties_from_file(self,filename):
 
 		""" This method fills the FILE_PROPERTIES property with the default values for the file.
 			It returns False if the file isn't a valid video. The tuple contains the number of sound
@@ -294,16 +292,7 @@ class newfile(file_get_params):
 			return False,audio_tracks
 		isvideo,audio_tracks=self.read_file_values(filename,False) # get all the values in FILE_VALUES
 
-		while filename[-1]==os.sep:
-			filename=filename[:-1]
-	
-		nombre=filename
-		while True: # get the filename without the path
-			posic=nombre.find(os.path.sep)
-			if posic==-1:
-				break
-			else:
-				nombre=nombre[posic+1:]
+		nombre = os.path.basename(filename)
 	
 		# filename[0]; path[1]; width[2]; heigh[3]; length[4] (seconds); original fps[5];
 		# original videorate["oarate"]; original audiorate[7];
@@ -328,14 +317,21 @@ class newfile(file_get_params):
 		self.file_properties["audio_list"]=self.file_values["audio_list"][:]
 		self.file_properties["audio_stream"]=self.file_values["audio_stream"]
 		
+		self.file_properties["ofps"]=self.file_values["fps"]
+		self.file_properties["ofps2"]=self.file_values["ofps2"]
+		self.file_properties["filesize"]=os.stat(filename)[stat.ST_SIZE] # file size
+
+		return True, audio_tracks
+
+
+	def create_default_video_parameters(self, filename):
+		success, audio_tracks = self.init_properties_from_file(filename)  # properties of the file itself
+
 		if self.pal:
 			self.file_properties["fps"]=25
 		else:
 			self.file_properties["fps"]=30
 
-		self.file_properties["ofps"]=self.file_values["fps"]
-		self.file_properties["ofps2"]=self.file_values["ofps2"]
-		
 		self.file_properties["blackbars"]=0 # black bars, no scale
 		self.file_properties["lchapters"]=5
 		self.file_properties["adelay"]=0 # no audio delay
@@ -352,7 +348,6 @@ class newfile(file_get_params):
 		self.file_properties["subfont_size"]=28 # subtitle font size
 		self.file_properties["sound51"]=False # don't use 5.1 sound
 		self.file_properties["gop12"]=True # GOP of 12 by default to increase compatibility
-		self.file_properties["filesize"]=os.stat(filename)[stat.ST_SIZE] # file size
 		self.file_properties["trellis"]=True # use trellis
 		self.file_properties["twopass"]=False # two pass encoding
 		self.file_properties["turbo1stpass"]=False # use turbo 1st pass on two pass encoding

@@ -186,14 +186,14 @@ class subtitles_adder(devede_executor.executor):
 			self.print_error=_("Conversion failed.\nIt seems a bug of SPUMUX.")
 			self.launch_program(comando,output=True)
 		else:
-			comando="spumux -m "
+			comando = ['spumux', '-m']
 			if disctype=="vcd":
-				comando+="svcd"
+				comando.append("svcd")
 			else:
-				comando+=disctype
-		
-			comando+=' -s '+str(stream)+' "'+filefolder+filename+'_sub.xml"'
-		
+				comando.append(disctype)
+
+			comando.extend(['-s', str(stream), os.path.join(filefolder, filename + '_sub.xml')])
+
 			self.print_error=_("Conversion failed.\nIt seems a bug of SPUMUX.")
 			self.launch_shell(comando,output=True,stdinout=[self.currentfile,self.currentfile+".sub"])
 

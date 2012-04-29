@@ -6,6 +6,21 @@ scriptdir="`dirname ${0}`"
 DESTDIR="${DESTDIR:-}"
 
 
+make_installables() {
+    for FILE in devede_cli devede
+    do
+        sed -e "s|^pkgdatadir.*|pkgdatadir = '$pkgdatadir'|" \
+            -e "s|^docdir.*|docdir = '$pkgdocdir'|" \
+            -e "s|^pkglibdir.*|pkglibdir = '$pkglibdir'|" \
+            -e "s|^localedir.*|localedir = '$datadir/locale'|" \
+            -e "s|^glade.*|glade = pkgdatadir|" \
+            -e "s|^font_path.*|font_path = pkgdatadir|" \
+            ${FILE}.py >${FILE}.installable
+        chmod +x ${FILE}.installable
+    done
+}
+
+
 install_lang()		# arg1=datadir, arg2=locale, arg3=<lang file name>.
 
 {
@@ -47,7 +62,9 @@ install_others()	# arg1=bindir, arg2=datadir, arg3=pkglibdir,
 
 {
 	install -m 755 -d "${DESTDIR}${1}"
-	install -m 755 "${scriptdir}/devede.py" "${DESTDIR}${1}/devede"
+	install -m 755 "${scriptdir}/devede.installable" "${DESTDIR}${1}/devede"
+	install -m 755 "${scriptdir}/devede_cli.installable" "${DESTDIR}${1}/devede_cli"
+
 	install -m 755 "${scriptdir}/devede_debug" "${DESTDIR}${1}/devede_debug"
 	install -m 755 "${scriptdir}/devede-debug" "${DESTDIR}${1}/devede-debug"
 
@@ -150,6 +167,8 @@ else
 	pkgdocdir="${pkgdocdir:-${docdir}/devede}"
 
 	#	And now, install everything according to paths above.
+
+        make_installables
 
 	install_locales "${datadir}"
 	install_others	"${bindir}"					\

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+# vim:noet:ts=8:sts=8:sw=8
 
 # Copyright 2006-2009 (C) Raster Software Vigo (Sergio Costas)
 # Copyright 2006-2009 (C) Peter Gill - win32 parts
@@ -879,10 +880,12 @@ class xml_files(devede_executor.executor):
 		currentfile=self.filefolder+self.filename+"_menu_"+str(counter)+".mpg"
 	
 		audio=self.menu_sound
-		command_var.append("-loop_input")
-		
+
 		command_var.append("-f")
 		command_var.append("image2")
+
+		command_var.extend(["-loop", '1'])
+
 		command_var.append("-t")
 		command_var.append(str(1+self.menu_sound_duration))
 		command_var.append("-i")
@@ -1032,11 +1035,11 @@ class xml_files(devede_executor.executor):
 			comando.append(os.path.join(self.filefolder,self.filename+"_menu2_"+str(counter)+".mpg"))
 			self.launch_program(comando)
 		else:
-			comando="spumux"
-			
-			comando+=' "' +os.path.join(self.filefolder,self.filename+'_menu_'+str(counter)+'.xml"')
+			comando = ["spumux"]
 
-			print "Launch: "+comando
+			comando.append(os.path.join(self.filefolder, self.filename + '_menu_' + str(counter) + '.xml'))
+
+			print "Launch: ", comando
 			self.launch_shell(comando,stdinout=[os.path.join(self.filefolder,self.filename+"_menu_"+str(counter)+".mpg"),os.path.join(self.filefolder,self.filename+"_menu2_"+str(counter)+".mpg")])
 
 

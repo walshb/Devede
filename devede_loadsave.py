@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+# vim:noet:ts=8:sts=8:sw=8
 
 # Copyright 2006-2009 (C) Raster Software Vigo (Sergio Costas)
 # Copyright 2006-2009 (C) Peter Gill - win32 parts
@@ -24,10 +25,13 @@ pygtk.require ('2.0')
 import gtk
 import pickle
 import os
+import sys
+import io
 
 import devede_other
 import devede_dialogs
 import devede_newfiles
+import devede_file
 
 class load_save_config:
 	
@@ -57,7 +61,8 @@ class load_save_config:
 			
 			filter = gtk.FileFilter()
 			filter.add_pattern("*.devede")
-			filter.set_name(".devede")
+			filter.add_pattern("*.devede2")
+			filter.set_name(".devede2")
 			window.add_filter(filter)
 			
 			window.show()
@@ -73,94 +78,61 @@ class load_save_config:
 			window = None
 		
 		try:
-			output=open(file_name)
+			infp = io.open(file_name, 'rb', buffering=10)
 		except:
 			w = devede_dialogs.show_error(self.gladefile,_("Can't open the file."))
 			w = None
 			return
-	
-		try:
-			values=pickle.load(output)
-		except:
-			w = devede_dialogs.show_error(self.gladefile,_("That file doesn't contain a disc structure."))
-			w = None
-			return
-		
-		if values!="DeVeDe":
-			w = devede_dialogs.show_error(self.gladefile,_("That file doesn't contain a disc structure."))
-			w = None
-			return
-		
-		global_vars2={}
-		try:
-			values=pickle.load(output)
-			global_vars2=pickle.load(output)
-		except:
-			w = devede_dialogs.show_error(self.gladefile,_("That file doesn't contain a DeVeDe structure."))
-			w = None
-			return
-	
-		
-		output.close()
-		
+
+		values, global_vars2 = devede_file.read(infp)
+
+		infp.close()
+
+		self.load_data(file_name, values, global_vars2)
+
+		if global_vars2.has_key("erase_files")==False:
+			w=self.tree.get_object("create_iso")
+			w.set_active(True)
+
+
+	def load_data(self, file_name, file_structure, global_vars2):
+		"""Update data structures using values and global_vars2."""
+
+		all_file_props = []
+		for title_data in file_structure:
+			all_file_props.extend(title_data[1:])
+
 		not_found=[]
-		for element in values:
-			for element2 in element[1:]:
-				try:
-					v=os.stat(element2["path"])
-				except:
-					not_found.append(str(element2["path"]))
-					continue
-				
-				if False==element2.has_key("copy_audio"):
-					element2["copy_audio"]=False # for backward compatibility
-				if False==element2.has_key("sound51"):
-					element2["sound51"]=False # for backward compatibility
-				if False==element2.has_key("rotate"):
-					element2["rotate"]=0
-				if False==element2.has_key("vmirror"):
-					element2["vmirror"]=False
-				if False==element2.has_key("hmirror"):
-					element2["hmirror"]=False
-				if False==element2.has_key("gop12"):
-					element2["gop12"]=True # for backward compatibility
-				if False==element2.has_key("isvob"):
-					element2["isvob"]=False # for backward compatibility
-				if False==element2.has_key("swap_fields"):
-					element2["swap_fields"]=False # for backward compatibility
-				if False==element2.has_key("twopass"):
-					element2["twopass"]=False # for backward compatibility
-				if False==element2.has_key("turbo1stpass"):
-					element2["turbo1stpass"]=False # for backward compatibility
-				if False==element2.has_key("subfont_size"):
-					element2["subfont_size"]=28 # subtitle font size
-				if False==element2.has_key("volume"):
-					element2["volume"]=100 # default volume (in percentage)
-				if False==element2.has_key("force_subs"):
-					element2["force_subs"]=False # by default, subtitles aren't forced
-				
-				if False==element2.has_key("audio_stream"):
-					fileprop=devede_newfiles.newfile("","")
-					(fine,audio)=fileprop.read_file_values(element2["path"],0)
-					if fine and (audio==0):
-						element2["audio_list"]=fileprop.file_values["audio_list"]
-						element2["audio_stream"]=fileprop.file_values["audio_stream"]
-						fileprop=None
-				
-				if False==element2.has_key("sub_list"):
-					element2["sub_list"]=[]
-					if element2["subtitles"]!="":
-						tmp={}
-						tmp["subtitles"]=element2["subtitles"]
-						tmp["sub_codepage"]=element2["sub_codepage"]
-						tmp["sub_language"]="EN (ENGLISH)"
-						tmp["subtitles_up"]=element2["subtitles_up"]
-						del element2["subtitles"]
-						del element2["sub_codepage"]
-						del element2["subtitles_up"]
-						element2["sub_list"].append(tmp)
-				
-	
+		for file_props in all_file_props:
+			try:
+				os.stat(file_props["path"])
+			except:
+				not_found.append(str(file_props["path"]))
+				continue
+
+			newfile = devede_newfiles.newfile(global_vars2['PAL'], global_vars2['disctocreate'])
+			newfile.init_properties_from_file(file_props['path'])
+			for key in newfile.file_properties:
+				if key in file_props:  # already overridden by user
+					if key not in ('path', 'audio_stream', 'audio_list'):
+						sys.stderr.write('"%s" in config file -- but ignoring this.\n' % key)
+#						sys.exit(1)
+				file_props[key] = newfile.file_properties[key]
+
+			if 'sub_list' not in file_props:
+				file_props["sub_list"] = []
+				if file_props["subtitles"]:
+					tmp={}
+					tmp["subtitles"] = file_props["subtitles"]
+					tmp["sub_codepage"] = file_props["sub_codepage"]
+					tmp["sub_language"]="EN (ENGLISH)"
+					tmp["subtitles_up"] = file_props["subtitles_up"]
+					del file_props["subtitles"]
+					del file_props["sub_codepage"]
+					del file_props["subtitles_up"]
+					file_props["sub_list"].append(tmp)
+
+
 		if len(not_found)!=0:
 			t_string=_("Can't find the following movie files. Please, add them and try to load the disc structure again.\n")
 			for element in not_found:
@@ -219,7 +191,7 @@ class load_save_config:
 		while (len(self.structure)>0):
 			self.structure.pop()
 		
-		for element in values:
+		for element in file_structure:
 			self.structure.append(element)
 		for element in global_vars2:
 			self.global_vars[element]=global_vars2[element]
@@ -241,10 +213,6 @@ class load_save_config:
 			self.global_vars["menu_title_text"]=""
 			self.global_vars["menu_title_fontname"]="Sans 14"
 
-		if global_vars2.has_key("erase_files")==False:
-			w=self.tree.get_object("create_iso")
-			w.set_active(True)
-
 		self.global_vars["struct_name"]=file_name # update the path
 		
 		self.done = True
@@ -262,7 +230,8 @@ class load_save_config:
 			
 			filter=gtk.FileFilter()
 			filter.add_pattern("*.devede")
-			filter.set_name(".devede")
+			filter.add_pattern("*.devede2")
+			filter.set_name(".devede2")
 			saveconfig=tree.get_object("wsaveconfig")
 			saveconfig.add_filter(filter)
 			saveconfig.set_do_overwrite_confirmation(True)
@@ -289,10 +258,8 @@ class load_save_config:
 			self.global_vars["struct_name"]=fname
 		
 		try:
-			output=open(self.global_vars["struct_name"],"wb")
-			id="DeVeDe"
-			pickle.dump(id,output)
-			pickle.dump(self.structure,output)
+			output = open(self.global_vars["struct_name"],"wb")
+
 			vars={}
 			vars["disctocreate"]=self.global_vars["disctocreate"]
 			vars["titlecounter"]=self.global_vars["titlecounter"]
@@ -328,7 +295,9 @@ class load_save_config:
 
 			print "Action: "+str(vars["action_todo"])
 			print "Variables: "+str(vars)
-			pickle.dump(vars,output)
+
+			devede_file.write(output, self.structure, vars, minimal=True)
+
 			output.close()
 		except:
 			w=devede_dialogs.show_error(self.gladefile,_("Can't save the file."))
