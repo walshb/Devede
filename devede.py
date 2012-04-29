@@ -59,7 +59,10 @@ if (sys.platform!="win32") and (sys.platform!="win64"):
 #####################
 
 gettext.bindtextdomain('devede', localedir)
-locale.setlocale(locale.LC_ALL,"")
+try:
+    locale.setlocale(locale.LC_ALL,"")
+except locale.Error:
+    pass
 gettext.textdomain('devede')
 gettext.install("devede",localedir=localedir) # None is sys default locale
 #   Note also before python 2.3 you need the following if

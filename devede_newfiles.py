@@ -180,7 +180,7 @@ class newfile(file_get_params):
 		""" This class manages every new film added. It reads its parameters (resolution, FPS, number of
 		channels...) and allows to generate the default values, both when choosing manually a file from the
 		Properties window, or when dragging&dropping them into the main window """
-
+		
 		file_get_params.__init__(self)
 
 		self.pal=pal

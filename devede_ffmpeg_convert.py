@@ -322,6 +322,10 @@ class video_converter_ffmpeg(devede_executor.executor):
 					command_var.append("film-dvd")
 				else:
 					command_var.append("pal-dvd")
+				#command_var.append("-maxrate")
+				#command_var.append("7000k")
+				#command_var.append("-minrate")
+				#command_var.append("2200k")
 			elif (disctype=="vcd"):
 				vcd=True
 				if final_framerate==30:
@@ -385,6 +389,11 @@ class video_converter_ffmpeg(devede_executor.executor):
 			command_var.append("-g")
 			command_var.append("12")
 		
+		command_var.append("-bf")
+		command_var.append("2")
+		command_var.append("-strict")
+		command_var.append("1")
+		
 		if seconds!=0:
 			command_var.append("-t")
 			command_var.append(str(seconds))
@@ -435,14 +444,11 @@ class video_converter_ffmpeg(devede_executor.executor):
 
 		# Currently Mencoder supports up to 8 threads
 		if isvob==False:
-			if threads>8:
-				nthreads=8
-			else:
-				nthreads=threads
+			threads
 			
-			if nthreads>1:
+			if threads>1:
 				command_var.append("-threads")
-				command_var.append(str(nthreads))
+				command_var.append(str(threads))
 
 			command_var.append("-trellis")
 			if videofile["trellis"]:
