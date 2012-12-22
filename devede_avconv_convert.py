@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-# vim:noet:ts=8:sts=8:sw=8
 
 # Copyright 2006-2009 (C) Raster Software Vigo (Sergio Costas)
 # Copyright 2006-2009 (C) Peter Gill - win32 parts
@@ -228,8 +227,7 @@ class video_converter_ffmpeg(devede_executor.executor):
 					addx+=1
 					
 		
-		command_var=["ffmpeg"]
-		#command_var=["avconv"]
+		command_var=["avconv"]
 
 		command_var.append("-i")
 		command_var.append(videofile["path"])
@@ -472,10 +470,6 @@ class video_converter_ffmpeg(devede_executor.executor):
 			elif videofile["mbd"]==2:
 				command_var.append("-mbd")
 				command_var.append("2")
-	
-			if (vcd==False):
-				command_var.append("-b:v")
-				command_var.append(str(videorate)+"000")
 		
 			#if disctype!="divx":
 			#	lavcopts+=":keyint="+str(keyintv)
@@ -489,8 +483,8 @@ class video_converter_ffmpeg(devede_executor.executor):
 #					else:
 #						lavcopts+="mp2"
 					#lavcopts+=":abitrate="+str(audiorate)
-				command_var.append("-ab")
-				command_var.append(str(audiorate)+"000")
+				command_var.append("-b:a")
+				command_var.append(str(audiorate)+"k")
 
 			if (default_res==False):
 				command_var.append("-aspect")
@@ -509,7 +503,13 @@ class video_converter_ffmpeg(devede_executor.executor):
 						os.remove(passlog_var)
 					except:
 						 pass
-
+	
+			if (vcd==False):
+				command_var.append("-b:v")
+				command_var.append(str(videorate)+"k")
+	
+		
+		
 		at=audio_tracks
 		while (at>1):
 			if (volume!=100):
@@ -524,7 +524,7 @@ class video_converter_ffmpeg(devede_executor.executor):
 			extra_params,new_param=devede_other.get_new_param(extra_params)
 			if new_param!="":
 				command_var.append(new_param)
-	
+
 		currentfile=self.create_filename(filefolder+filename,title,chapter,disctype=="divx")
 
 		if (passlog_var != None) and (isvob==False):
@@ -536,7 +536,6 @@ class video_converter_ffmpeg(devede_executor.executor):
 			command_var.append("/dev/null")
 		else:
 			command_var.append(currentfile)
-		
 
 		self.print_error=_("Conversion failed.\nIt seems a bug of Mencoder.")
 		if (videofile["params"]!="") or (videofile["params_vf"]!="") or (videofile["params_lame"]!=""):
