@@ -106,6 +106,7 @@ def get_default_globals(pic_path, help_path, glade=None):
 
 
 def check_programs(global_vars):
+#### PASTE3
     errors="" # check for installed programs
     if (sys.platform=="win32") or (sys.platform=="win64"):
         try:
@@ -169,6 +170,8 @@ def check_programs(global_vars):
 
         if 127==devede_other.check_program("spumux --help"):
             errors+="spumux\n"
+
+#### ENDPASTE3
 
     return errors
 
