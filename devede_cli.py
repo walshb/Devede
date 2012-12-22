@@ -30,6 +30,7 @@ import devede_newfiles
 import devede_loadsave
 import devede_convert
 import devede_main
+import devede_other
 
 gettext.bindtextdomain('devede', localedir)
 locale.setlocale(locale.LC_ALL,"")
@@ -59,16 +60,20 @@ def main():
         file_structure, file_globals = devede_file.read(fp)
         fp.close()
 
+    devede_other.load_config(global_vars) # load configuration
+
     devede_globals.check_programs(global_vars)
 
     structure = []
     loader = devede_loadsave.load_save_config(None, structure, global_vars, None)
     loader.load_data(filename, file_structure, file_globals)  # will update global_vars
 
-    global_vars['use_ffmpeg'] = True
-    global_vars['warning_ffmpeg'] = False
     global_vars['number_actions'] = 3  # including DVD image
     global_vars['erase_temporary_files'] = False
+
+    # let's try out this avconv thing.
+    global_vars["encoder_video"] = "avconv"
+    global_vars["encoder_menu"] = "avconv"
 
     mainwin = devede_main.main_window(global_vars, None)
     mainwin.structure = structure  # XXX refactor this
