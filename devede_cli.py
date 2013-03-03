@@ -41,7 +41,7 @@ _ = gettext.gettext
 
 def main():
     if len(sys.argv) == 1:
-        sys.stderr.write('usage: devede_cli filename|args...\n')
+        devede_file.usage()
         return 1
 
     assert os.path.exists(os.path.join(pkgdatadir, 'silence.ogg'))

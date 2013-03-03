@@ -1,3 +1,4 @@
+import sys
 import os
 import io
 import cPickle
@@ -157,6 +158,9 @@ class ArgParser(object):
             i += 1
             if not arg.startswith('--'):
                 raise ArgException('unknown option %s' % arg)
+            if arg == '--help':
+                usage()
+                sys.exit(0)
             if arg in arg_to_level:
                 self._tolevel(arg_to_level[arg])
                 continue
@@ -178,6 +182,14 @@ class ArgParser(object):
 def parse_args(args):
     parser = ArgParser()
     return parser.parse_args(args)
+
+
+def usage():
+    print 'Usage: devede_cli.py [input options] --output [output options]'
+    _usage_section('--title', 'Adds a new title', _title_prop_defaults, _title_info_aliases)
+    _usage_section('--file', 'Adds a file to the current title', _file_prop_defaults)
+    _usage_section('--subtitle', 'Adds subtitles to the current file', _sub_prop_defaults)
+    _usage_section('--output', 'Adds details of the output', _output_prop_defaults)
 
 
 def init_defaults(global_vars):
@@ -205,6 +217,15 @@ def _conv_and_defaults(d, defaults, aliases=None):
     _set_defaults(res, defaults)
 
     return res
+
+
+def _usage_section(opt, description, defaults, aliases=None):
+    raliases = aliases and dict([(v, k) for (k, v) in aliases.items()]) or {}
+    print '%s: %s. Can be followed by these options:' % (opt, description)
+    for key in sorted(defaults):
+        k = raliases.get(key, key)
+        print '    --%s%s' % (k.replace('_', '-'),
+                              defaults[key] and ' (default %s)' % defaults[key] or '')
 
 
 def _set_defaults(d, defaults):
