@@ -1,4 +1,4 @@
-##Creating a DVD at the command line
+##Authoring a DVD at the command line
 
 First clone the code and switch to the "command_line" branch:
 
@@ -30,7 +30,7 @@ More details are available by typing:
 ./devede_cli.py --help
 ```
 
-##Creating a DVD using the GUI
+##Authoring a DVD using the GUI
 
 The Devede GUI is still available to create DVDs:
 
