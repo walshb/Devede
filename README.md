@@ -1,5 +1,15 @@
 ##Creating a DVD at the command line
 
+First clone the code and switch to the "command_line" branch:
+
+```
+git clone https://github.com/walshb/Devede.git
+cd Devede
+git checkout command_line
+```
+
+Now the DVD .iso image can be created:
+
 ```
 ./devede_cli.py --path myvideo.avi --output --finalfolder /var/tmp --outputname mydvd
 ```
