@@ -45,7 +45,7 @@ def _show_objects(win_name):
 
 
 def _click(win_name, btn_name):
-    ldtp.waittillguiexist(win_name)
+    ldtp.waittillguiexist(win_name, btn_name)
 
     for i in xrange(5):
         try:
@@ -57,23 +57,20 @@ def _click(win_name, btn_name):
 
 
 def _choosefile(fname, win_name='dlgSelectaFile'):
-    _show_objects(win_name)
-
-    ldtp.wait(2)
+    ldtp.waittillguiexist(win_name, 'tblPlaces')
 
     ldtp.singleclickrow(win_name, 'tblPlaces', 'File System')
 
-    ldtp.wait(1)
-
     _click(win_name, 'tbtnTypeafilename')
 
-    ldtp.wait(2)
+    # this will fail if our version of ldtp2 uses setCacheMask(pyatspi.cache.ALL)
+    ldtp.waittillguiexist(win_name, 'txtLocation')
 
     ldtp.settextvalue(win_name, 'txtLocation', fname)
 
-    ldtp.wait(2)
-
     _click(win_name, 'btnOpen')
+
+    ldtp.waittillguinotexist(win_name)
 
 
 class TestMinimal(TestCase):
@@ -93,28 +90,27 @@ class TestMinimal(TestCase):
 
         subprocess.call(['rm', '-rf', '/var/tmp/devede_test'])
 
+        # Create Video DVD
         _click('frmDisctypeselection', 'btnVideoDVD*')
 
-        _show_objects('frm*DeVeDe')
+        ##_show_objects('frm*DeVeDe')
 
+        # Add a file
         _click('frm*DeVeDe', 'btnAdd1')
 
-        _show_objects('frmFileproperties')
+        ##_show_objects('frmFileproperties')
 
         _click('frmFileproperties', 'btn(None)')  # no filename yet
 
-        ldtp.wait(2)
-
-        sys.stderr.write('%s\n' % (ldtp.getwindowlist(),))
+        ##sys.stderr.write('%s\n' % (ldtp.getwindowlist(),))
 
         _choosefile(vid_fname)
 
         _click('frmFileproperties', 'btnAdd')  # add subtitles
 
-        sys.stderr.write('%s\n' % (ldtp.getwindowlist(),))
+        ##sys.stderr.write('%s\n' % (ldtp.getwindowlist(),))
 
-        _show_objects('dlg*')
-
+        # Choose subtitles file
         _click('dlg*', 'btn(None)')  # no subtitles filename yet
 
         _choosefile(sub_fname)
@@ -125,36 +121,32 @@ class TestMinimal(TestCase):
 
         _click('frm*DeVeDe', 'btnAdjustdiscusage')
 
+        # Forward to disk output dialog
         _click('frm*DeVeDe', 'btnForward')
 
-        ldtp.wait(2)
+        ldtp.waittillguiexist('dlg*', 'cbo*')
 
-        sys.stderr.write('%s\n' % (ldtp.getwindowlist(),))
+        ##sys.stderr.write('%s\n' % (ldtp.getwindowlist(),))
 
-        _show_objects('dlg*')
-
-#        _show_objects('frmSelect*File')
-
-#        ldtp.wait(10)
-
-
+        # Choose output folder
         ldtp.comboselect('dlg*', 'cbo*', 'Other...')
-
-        ldtp.wait(2)
 
         _choosefile('/var/tmp', win_name='dlgChooseafolder')
 
-        ldtp.wait(2)
-
+        # Set DVD name
         ldtp.settextvalue('dlg*', 'txt*', 'devede_test')
-
-        ldtp.wait(2)
 
         _click('dlg*', 'btnOK')
 
-        ldtp.wait(100)
+        # making the DVD now!
+        ldtp.waittillguiexist('frmCreating*')
 
-        self.assertTrue(True)
+        ##sys.stderr.write('%s\n' % (ldtp.getwindowlist(),))
+
+        # wait til OK, then click
+        _click('dlg*', 'btnOK')
+
+        self.assertTrue(os.path.exists('/var/tmp/devede_test/devede_test.iso')
 
 
 if __name__ == "__main__":
