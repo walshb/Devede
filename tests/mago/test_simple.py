@@ -146,7 +146,7 @@ class TestMinimal(TestCase):
         # wait til OK, then click
         _click('dlg*', 'btnOK')
 
-        self.assertTrue(os.path.exists('/var/tmp/devede_test/devede_test.iso')
+        self.assertTrue(os.path.exists('/var/tmp/devede_test/devede_test.iso'))
 
 
 if __name__ == "__main__":
